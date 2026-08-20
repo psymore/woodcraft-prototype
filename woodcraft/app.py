@@ -1,7 +1,16 @@
 # woodcraft/app.py
 from direct.showbase.ShowBase import ShowBase
 from direct.task import Task
-from panda3d.core import AmbientLight, DirectionalLight, LineSegs
+from panda3d.core import (
+    AmbientLight,
+    CollisionHandlerQueue,
+    CollisionNode,
+    CollisionRay,
+    CollisionTraverser,
+    DirectionalLight,
+    GeomNode,
+    LineSegs,
+)
 
 from woodcraft.camera_math import orbit_position, pan_target, update_orbit_angles, zoom_distance
 from woodcraft.piece import Piece, build_piece_nodepath
@@ -73,6 +82,15 @@ class WoodcraftApp(ShowBase):
         self.accept("wheel_up", self._on_wheel_up)
         self.accept("wheel_down", self._on_wheel_down)
 
+        self._picker_traverser = CollisionTraverser()
+        self._picker_queue = CollisionHandlerQueue()
+        picker_node = CollisionNode("mouseRay")
+        picker_node.set_from_collide_mask(GeomNode.get_default_collide_mask())
+        self._picker_ray = CollisionRay()
+        picker_node.add_solid(self._picker_ray)
+        picker_np = self.camera.attach_new_node(picker_node)
+        self._picker_traverser.add_collider(picker_np, self._picker_queue)
+
         self.task_mgr.add(self._on_frame, "woodcraft-update")
 
     def _setup_lighting(self):
@@ -94,7 +112,33 @@ class WoodcraftApp(ShowBase):
         self.camera.look_at(*self.cam_target)
 
     def _on_mouse1_down(self):
-        self._orbiting = True
+        picked = self._pick_piece()
+        if picked is not None:
+            self._select(picked)
+            self._dragging_piece = picked
+        else:
+            self._select(None)
+            self._orbiting = True
+
+    def _pick_piece(self):
+        if not self.mouseWatcherNode.has_mouse():
+            return None
+        mouse = self.mouseWatcherNode.get_mouse()
+        self._picker_ray.set_from_lens(self.camNode, mouse.get_x(), mouse.get_y())
+        self._picker_traverser.traverse(self.render)
+        if self._picker_queue.get_num_entries() == 0:
+            return None
+        self._picker_queue.sort_entries()
+        entry = self._picker_queue.get_entry(0)
+        found = entry.get_into_node_path().find_net_tag("piece")
+        return None if found.is_empty() else found
+
+    def _select(self, node_path):
+        if self._selected is not None:
+            self._selected.clear_color_scale()
+        self._selected = node_path
+        if self._selected is not None:
+            self._selected.set_color_scale(1.4, 1.4, 1.4, 1.0)
 
     def _on_mouse1_up(self):
         self._orbiting = False
