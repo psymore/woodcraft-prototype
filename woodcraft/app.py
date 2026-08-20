@@ -75,8 +75,10 @@ class WoodcraftApp(ShowBase):
         self._last_mouse = None
         self._orbiting = False
         self._panning = False
-        self._dragging_piece = None  # populated by Task 9/10
-        self._selected = None  # populated by Task 9
+        self._dragging_piece = None
+        self._selected = None
+        self._drag_plane_z = 0.0
+        self._drag_offset = (0.0, 0.0)
 
         self.accept("mouse1", self._on_mouse1_down)
         self.accept("mouse1-up", self._on_mouse1_up)
@@ -120,6 +122,15 @@ class WoodcraftApp(ShowBase):
             self._select(picked)
             self._dragging_piece = picked
             self._drag_plane_z = picked.get_z(self.render)
+            self._drag_offset = (0.0, 0.0)
+            if self.mouseWatcherNode.has_mouse():
+                mouse = self.mouseWatcherNode.get_mouse()
+                hit = self._ray_plane_hit(mouse, self._drag_plane_z)
+                if hit is not None:
+                    self._drag_offset = (
+                        picked.get_x(self.render) - hit[0],
+                        picked.get_y(self.render) - hit[1],
+                    )
         else:
             self._select(None)
             self._orbiting = True
@@ -145,6 +156,12 @@ class WoodcraftApp(ShowBase):
             self._selected.set_color_scale(1.4, 1.4, 1.4, 1.0)
 
     def _on_mouse1_up(self):
+        if self._dragging_piece is not None:
+            for piece, node in zip(self.pieces, self.piece_nodes):
+                if node == self._dragging_piece:
+                    pos = node.get_pos(self.render)
+                    piece.position = (pos.get_x(), pos.get_y(), pos.get_z())
+                    break
         self._orbiting = False
         self._dragging_piece = None
 
@@ -196,24 +213,26 @@ class WoodcraftApp(ShowBase):
         self._last_mouse = current
         return Task.cont
 
-    def _update_drag(self, mouse):
+    def _ray_plane_hit(self, mouse, plane_z):
         near = Point3()
         far = Point3()
         if not self.camLens.extrude(mouse, near, far):
-            return
-
+            return None
         world_near = self.render.get_relative_point(self.camera, near)
         world_far = self.render.get_relative_point(self.camera, far)
         ray_dir = world_far - world_near
-
-        hit = intersect_ray_plane(
+        return intersect_ray_plane(
             ray_origin=(world_near.get_x(), world_near.get_y(), world_near.get_z()),
             ray_dir=(ray_dir.get_x(), ray_dir.get_y(), ray_dir.get_z()),
-            plane_point=(0.0, 0.0, self._drag_plane_z),
+            plane_point=(0.0, 0.0, plane_z),
             plane_normal=(0.0, 0.0, 1.0),
         )
+
+    def _update_drag(self, mouse):
+        hit = self._ray_plane_hit(mouse, self._drag_plane_z)
         if hit is None:
             return
 
-        snapped_x, snapped_y = snap_xy(hit[0], hit[1], GRID_INCREMENT)
+        offset_x, offset_y = self._drag_offset
+        snapped_x, snapped_y = snap_xy(hit[0] + offset_x, hit[1] + offset_y, GRID_INCREMENT)
         self._dragging_piece.set_pos(self.render, snapped_x, snapped_y, self._drag_plane_z)
