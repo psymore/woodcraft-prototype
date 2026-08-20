@@ -11,6 +11,7 @@ where things live, not what they say.
 - **Implementation plans**: `docs/superpowers/plans/` — one plan per prototype stage.
 - **Prototype 0 code**: `woodcraft/` (Panda3D desktop spike). Entry point: `woodcraft/main.py`.
 - **Tests**: `tests/`, run with `pytest`.
+- **AI knowledge-architecture guidance** (reference, not project-specific): [docs/reference/project-agnostic-knowledge-architecture-mother-prompt.md](docs/reference/project-agnostic-knowledge-architecture-mother-prompt.md)
 
 ## Before you start
 
