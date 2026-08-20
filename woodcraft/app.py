@@ -10,10 +10,13 @@ from panda3d.core import (
     DirectionalLight,
     GeomNode,
     LineSegs,
+    Point3,
 )
 
 from woodcraft.camera_math import orbit_position, pan_target, update_orbit_angles, zoom_distance
 from woodcraft.piece import Piece, build_piece_nodepath
+from woodcraft.raycast import intersect_ray_plane
+from woodcraft.snapping import snap_xy
 
 GRID_INCREMENT = 1.0  # inches
 GRID_EXTENT = 60.0  # inches, half-width of the drawn ground grid
@@ -116,6 +119,7 @@ class WoodcraftApp(ShowBase):
         if picked is not None:
             self._select(picked)
             self._dragging_piece = picked
+            self._drag_plane_z = picked.get_z(self.render)
         else:
             self._select(None)
             self._orbiting = True
@@ -193,4 +197,23 @@ class WoodcraftApp(ShowBase):
         return Task.cont
 
     def _update_drag(self, mouse):
-        pass  # implemented in Task 10
+        near = Point3()
+        far = Point3()
+        if not self.camLens.extrude(mouse, near, far):
+            return
+
+        world_near = self.render.get_relative_point(self.camera, near)
+        world_far = self.render.get_relative_point(self.camera, far)
+        ray_dir = world_far - world_near
+
+        hit = intersect_ray_plane(
+            ray_origin=(world_near.get_x(), world_near.get_y(), world_near.get_z()),
+            ray_dir=(ray_dir.get_x(), ray_dir.get_y(), ray_dir.get_z()),
+            plane_point=(0.0, 0.0, self._drag_plane_z),
+            plane_normal=(0.0, 0.0, 1.0),
+        )
+        if hit is None:
+            return
+
+        snapped_x, snapped_y = snap_xy(hit[0], hit[1], GRID_INCREMENT)
+        self._dragging_piece.set_pos(self.render, snapped_x, snapped_y, self._drag_plane_z)
