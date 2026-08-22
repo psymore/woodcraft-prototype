@@ -4,14 +4,15 @@
 
 **Goal:** Add a camera/view system, an engine-agnostic component data model, and a minimal view-control bar to `spikes/touch-spike-threejs/`, while migrating the two existing hardcoded boards onto the new data model without regressing tap-select/drag-move.
 
-**Architecture:** New pure, rendering-free modules (`component.ts`, `viewPresets.ts`, `framing.ts`) hold data/math and are unit-tested directly. `Board`/`Scene` are updated to consume `ComponentInstance`/`ComponentDefinition` instead of the old `BoardData` type. Camera orbit/pan/zoom comes from `@react-three/drei`'s `OrbitControls` (already a dependency), gated off during piece-drag via a lifted `isDraggingPiece` ref so a one-finger drag never drives both the camera and a board at once. A new `ViewControls` component renders the preset-view button bar and drives `OrbitControls` via its ref for view snapping and framing.
+**Architecture:** New pure, rendering-free modules (`component.ts`, `viewPresets.ts`, `framing.ts`) hold data/math. `Board`/`Scene` are updated to consume `ComponentInstance`/`ComponentDefinition` instead of the old `BoardData` type. Camera orbit/pan/zoom comes from `@react-three/drei`'s `OrbitControls` (already a dependency), gated off during piece-drag via a lifted `isDraggingPiece` ref so a one-finger drag never drives both the camera and a board at once. A new `ViewControls` component renders the preset-view button bar and drives `OrbitControls` via its ref for view snapping and framing.
 
-**Tech Stack:** React 19, `@react-three/fiber` 9, `@react-three/drei` 10, `three` 0.185, TypeScript, Vite, Vitest — all already in `spikes/touch-spike-threejs/package.json`; no new dependencies.
+**Tech Stack:** React 19, `@react-three/fiber` 9, `@react-three/drei` 10, `three` 0.185, TypeScript, Vite — all already in `spikes/touch-spike-threejs/package.json`; no new dependencies.
 
 **Spec:** `docs/superpowers/specs/2026-08-22-wood-cad-workshop-design.md` (Sub-project 1 — Foundation)
 
 ## Global Constraints
 
+- **No automated tests this session, for either engine** (explicit user decision, 2026-08-22, overriding this plan's original TDD structure): no new `*.test.ts`/`*.test.tsx` files, no Vitest. Verification is manual/visual only, per each task's manual verification steps. Existing tests already in the repo (`snap.test.ts`) are untouched but not a gate for these tasks.
 - One-finger drag on empty space = orbit; two-finger drag = pan; pinch = zoom; tap a piece = select; tap empty space = deselect. Object-drag and camera-drag must never both fire from the same gesture.
 - Coordinate system is Y = up, X = left/right, Z = depth (already the case in this codebase).
 - Geometry is procedural from dimensions — never swap meshes/assets when dimensions change.
@@ -26,67 +27,12 @@
 
 **Files:**
 - Create: `spikes/touch-spike-threejs/src/component.ts`
-- Test: `spikes/touch-spike-threejs/src/component.test.ts`
 
 **Interfaces:**
 - Consumes: nothing (leaf module).
 - Produces: `ComponentCategory`, `GeometryDescriptor`, `Dimensions`, `ComponentDefinition`, `ComponentInstance` types; `BOARD_DEFINITION: ComponentDefinition`; `INITIAL_BOARD_INSTANCES: ComponentInstance[]`; `getBoxSize(instance: ComponentInstance): [number, number, number]` — all consumed by Task 2.
 
-- [ ] **Step 1: Write the failing test**
-
-```typescript
-// spikes/touch-spike-threejs/src/component.test.ts
-import { describe, expect, it } from 'vitest'
-import { BOARD_DEFINITION, INITIAL_BOARD_INSTANCES, getBoxSize } from './component'
-
-describe('BOARD_DEFINITION', () => {
-  it('is a WOOD-category box with lumber-semantic default dimensions', () => {
-    expect(BOARD_DEFINITION.category).toBe('WOOD')
-    expect(BOARD_DEFINITION.geometry).toEqual({ shape: 'box' })
-    expect(BOARD_DEFINITION.defaultDimensions).toEqual({ thickness: 1.5, width: 3.5, length: 48 })
-    expect(BOARD_DEFINITION.connectionPoints).toEqual([])
-    expect(BOARD_DEFINITION.structuralProperties).toEqual({})
-    expect(BOARD_DEFINITION.explodeDirection).toBeNull()
-  })
-})
-
-describe('INITIAL_BOARD_INSTANCES', () => {
-  it('reproduces the two existing hardcoded boards', () => {
-    expect(INITIAL_BOARD_INSTANCES).toEqual([
-      {
-        id: 'board-a',
-        componentDefinitionId: 'board',
-        position: [-6, 1.75, 0],
-        rotation: [0, 0, 0],
-        dimensions: { thickness: 1.5, width: 3.5, length: 48 },
-        material: '#a6693f',
-      },
-      {
-        id: 'board-b',
-        componentDefinitionId: 'board',
-        position: [6, 1.75, 0],
-        rotation: [0, 0, 0],
-        dimensions: { thickness: 1.5, width: 3.5, length: 36 },
-        material: '#8c5730',
-      },
-    ])
-  })
-})
-
-describe('getBoxSize', () => {
-  it('maps thickness/width/length to Three.js BoxGeometry [width, height, depth] order', () => {
-    expect(getBoxSize(INITIAL_BOARD_INSTANCES[0])).toEqual([1.5, 3.5, 48])
-    expect(getBoxSize(INITIAL_BOARD_INSTANCES[1])).toEqual([1.5, 3.5, 36])
-  })
-})
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `cd spikes/touch-spike-threejs && npx vitest run src/component.test.ts`
-Expected: FAIL — `Cannot find module './component'` (file doesn't exist yet).
-
-- [ ] **Step 3: Write minimal implementation**
+- [ ] **Step 1: Write the module**
 
 ```typescript
 // spikes/touch-spike-threejs/src/component.ts
@@ -155,15 +101,15 @@ export function getBoxSize(instance: ComponentInstance): [number, number, number
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 2: Typecheck**
 
-Run: `cd spikes/touch-spike-threejs && npx vitest run src/component.test.ts`
-Expected: PASS (4 tests)
+Run: `cd spikes/touch-spike-threejs && npx tsc -b --noEmit`
+Expected: no type errors. (This is a compiler sanity pass, not a test suite — no test files are created this task.)
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add spikes/touch-spike-threejs/src/component.ts spikes/touch-spike-threejs/src/component.test.ts
+git add spikes/touch-spike-threejs/src/component.ts
 git commit -m "feat(threejs-spike): add ComponentDefinition/ComponentInstance data model"
 ```
 
@@ -291,7 +237,7 @@ export function Board({
   }
 
   const size = getBoxSize(instance)
-  void definition // definition is threaded through for future sub-projects (materials, geometry variants); unused this phase beyond its instance override
+  void definition // threaded through for future sub-projects (materials, geometry variants); unused this phase beyond its instance override
 
   return (
     <mesh
@@ -327,10 +273,10 @@ function App() {
 export default App
 ```
 
-- [ ] **Step 4: Run the full test suite and typecheck**
+- [ ] **Step 4: Typecheck**
 
-Run: `cd spikes/touch-spike-threejs && npx vitest run && npx tsc -b --noEmit`
-Expected: all tests PASS (component.test.ts + snap.test.ts), no type errors.
+Run: `cd spikes/touch-spike-threejs && npx tsc -b --noEmit`
+Expected: no type errors.
 
 - [ ] **Step 5: Manual regression check**
 
@@ -350,44 +296,12 @@ git commit -m "refactor(threejs-spike): migrate boards onto ComponentDefinition/
 
 **Files:**
 - Create: `spikes/touch-spike-threejs/src/viewPresets.ts`
-- Test: `spikes/touch-spike-threejs/src/viewPresets.test.ts`
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `ViewName` type, `ViewPreset` interface, `getViewPreset(view: ViewName): ViewPreset` — consumed by Task 5.
+- Produces: `ViewName` type, `ViewPreset` interface, `VIEW_NAMES: ViewName[]`, `getViewPreset(view: ViewName): ViewPreset` — consumed by Task 5.
 
-- [ ] **Step 1: Write the failing test**
-
-```typescript
-// spikes/touch-spike-threejs/src/viewPresets.test.ts
-import { describe, expect, it } from 'vitest'
-import { getViewPreset } from './viewPresets'
-
-describe('getViewPreset', () => {
-  it('returns the current fixed camera position for the 3d preset', () => {
-    expect(getViewPreset('3d')).toEqual({ position: [0, 20, 25], up: [0, 1, 0] })
-  })
-
-  it('returns opposing positions for front/back and left/right', () => {
-    expect(getViewPreset('front').position).toEqual([0, 0, 32])
-    expect(getViewPreset('back').position).toEqual([0, 0, -32])
-    expect(getViewPreset('left').position).toEqual([-32, 0, 0])
-    expect(getViewPreset('right').position).toEqual([32, 0, 0])
-  })
-
-  it('uses an alternate up vector for top/bottom to avoid gimbal lock looking straight down/up', () => {
-    expect(getViewPreset('top')).toEqual({ position: [0, 32, 0], up: [0, 0, -1] })
-    expect(getViewPreset('bottom')).toEqual({ position: [0, -32, 0], up: [0, 0, 1] })
-  })
-})
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `cd spikes/touch-spike-threejs && npx vitest run src/viewPresets.test.ts`
-Expected: FAIL — `Cannot find module './viewPresets'`.
-
-- [ ] **Step 3: Write minimal implementation**
+- [ ] **Step 1: Write the module**
 
 ```typescript
 // spikes/touch-spike-threejs/src/viewPresets.ts
@@ -418,15 +332,15 @@ export function getViewPreset(view: ViewName): ViewPreset {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 2: Typecheck**
 
-Run: `cd spikes/touch-spike-threejs && npx vitest run src/viewPresets.test.ts`
-Expected: PASS (3 tests)
+Run: `cd spikes/touch-spike-threejs && npx tsc -b --noEmit`
+Expected: no type errors.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add spikes/touch-spike-threejs/src/viewPresets.ts spikes/touch-spike-threejs/src/viewPresets.test.ts
+git add spikes/touch-spike-threejs/src/viewPresets.ts
 git commit -m "feat(threejs-spike): add pure view-preset camera positions"
 ```
 
@@ -436,45 +350,12 @@ git commit -m "feat(threejs-spike): add pure view-preset camera positions"
 
 **Files:**
 - Create: `spikes/touch-spike-threejs/src/framing.ts`
-- Test: `spikes/touch-spike-threejs/src/framing.test.ts`
 
 **Interfaces:**
 - Consumes: nothing.
 - Produces: `Bounds` interface, `computeBounds(positions: Array<[number, number, number]>): Bounds` — consumed by Task 5.
 
-- [ ] **Step 1: Write the failing test**
-
-```typescript
-// spikes/touch-spike-threejs/src/framing.test.ts
-import { describe, expect, it } from 'vitest'
-import { computeBounds } from './framing'
-
-describe('computeBounds', () => {
-  it('returns a default bound for an empty list', () => {
-    expect(computeBounds([])).toEqual({ center: [0, 0, 0], radius: 10 })
-  })
-
-  it('centers on a single point with a minimum radius', () => {
-    expect(computeBounds([[6, 1.75, 0]])).toEqual({ center: [6, 1.75, 0], radius: 1 })
-  })
-
-  it('computes the centroid and the max distance from it as radius', () => {
-    const result = computeBounds([
-      [-6, 1.75, 0],
-      [6, 1.75, 0],
-    ])
-    expect(result.center).toEqual([0, 1.75, 0])
-    expect(result.radius).toBe(6)
-  })
-})
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `cd spikes/touch-spike-threejs && npx vitest run src/framing.test.ts`
-Expected: FAIL — `Cannot find module './framing'`.
-
-- [ ] **Step 3: Write minimal implementation**
+- [ ] **Step 1: Write the module**
 
 ```typescript
 // spikes/touch-spike-threejs/src/framing.ts
@@ -501,15 +382,15 @@ export function computeBounds(positions: Array<[number, number, number]>): Bound
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 2: Typecheck**
 
-Run: `cd spikes/touch-spike-threejs && npx vitest run src/framing.test.ts`
-Expected: PASS (3 tests)
+Run: `cd spikes/touch-spike-threejs && npx tsc -b --noEmit`
+Expected: no type errors.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add spikes/touch-spike-threejs/src/framing.ts spikes/touch-spike-threejs/src/framing.test.ts
+git add spikes/touch-spike-threejs/src/framing.ts
 git commit -m "feat(threejs-spike): add pure frame-bounds math for Frame All/Selected"
 ```
 
@@ -520,12 +401,13 @@ git commit -m "feat(threejs-spike): add pure frame-bounds math for Frame All/Sel
 **Files:**
 - Create: `spikes/touch-spike-threejs/src/ViewControls.tsx`
 - Modify: `spikes/touch-spike-threejs/src/App.tsx`
+- Modify: `spikes/touch-spike-threejs/src/Scene.tsx`
 
 **Interfaces:**
 - Consumes: `getViewPreset`, `VIEW_NAMES`, `ViewName` from Task 3; `computeBounds` from Task 4; `OrbitControls` from `@react-three/drei`.
 - Produces: nothing consumed by later tasks in this plan (this is the top-level wiring).
 
-This task is UI/engine wiring that isn't meaningfully unit-testable (it's React + Three.js DOM/canvas interaction) — verification is manual, per the spec's own testing section.
+This task is UI/engine wiring that isn't meaningfully unit-testable (it's React + Three.js DOM/canvas interaction) and, per this session's constraint, has no automated tests anyway — verification is manual.
 
 - [ ] **Step 1: Create the view-control bar component**
 
@@ -660,7 +542,12 @@ export default App
 - [ ] **Step 3: Add the `onSelectionChange` prop to Scene.tsx used above**
 
 ```typescript
-// spikes/touch-spike-threejs/src/Scene.tsx — replace the function signature and setSelectedId calls
+// spikes/touch-spike-threejs/src/Scene.tsx — full replacement
+import { useState } from 'react'
+import { Board } from './Board'
+import { BOARD_DEFINITION, INITIAL_BOARD_INSTANCES } from './component'
+import type { ComponentInstance } from './component'
+
 export function Scene({
   onDragStateChange,
   onSelectionChange,
@@ -703,10 +590,10 @@ export function Scene({
 }
 ```
 
-- [ ] **Step 4: Run the full test suite and typecheck**
+- [ ] **Step 4: Typecheck**
 
-Run: `cd spikes/touch-spike-threejs && npx vitest run && npx tsc -b --noEmit`
-Expected: all tests PASS, no type errors. (This task adds no new automated tests — Steps 1–3 are wiring, verified manually in Step 5.)
+Run: `cd spikes/touch-spike-threejs && npx tsc -b --noEmit`
+Expected: no type errors.
 
 - [ ] **Step 5: Manual verification (desktop, mouse)**
 
@@ -738,5 +625,6 @@ git commit -m "feat(threejs-spike): wire OrbitControls, drag-gating, and view-co
 
 ## Self-review notes
 
-- **Spec coverage:** data model (Task 1), camera/view system incl. the hit-target gating risk (Task 5), view-control bar (Task 5), regression/migration (Task 2), testing — unit (Tasks 1/3/4) + manual (Task 5) — all covered. Inventory/inspector/hardware/assembly/exploded-view/structural-check are explicitly out of scope per the spec and have no tasks here.
-- **Known limitation (documented, not silently dropped):** orbit-dragging immediately after clicking TOP or BOTTOM may show a brief camera roll snap as `camera.up` resets to `[0,1,0]` on the next `OrbitControls` internal update — acceptable for this phase; revisit only if playtesting flags it as disorienting.
+- **Spec coverage:** data model (Task 1), camera/view system incl. the hit-target gating risk (Task 5), view-control bar (Task 5), regression/migration (Task 2), manual verification (Task 5). Inventory/inspector/hardware/assembly/exploded-view/structural-check are explicitly out of scope per the spec and have no tasks here.
+- **Deliberate scope change from the original plan (2026-08-22, user decision):** all automated-test steps (Vitest specs) were removed for this prototyping session. Every task's verification is now manual/visual or a compiler typecheck. This is a decision, not an oversight — the spec's own "Testing" subsection for Sub-project 1 listed automated unit tests, but the user overrode that in favor of manual testing for the duration of this session.
+- **Fixed post-review (was documented incorrectly here):** this note previously claimed orbit-dragging after TOP/BOTTOM caused only "a brief camera roll snap as `camera.up` resets to `[0,1,0]` on the next `OrbitControls` internal update." That was wrong — `OrbitControls` computes its internal up-alignment quaternion once, in its constructor, from `camera.up`, and never recomputes it afterward, even though `update()` runs every frame. There is no such automatic reset. The real bug: after a TOP/BOTTOM click sets `camera.up` to `(0,0,-1)`/`(0,0,1)`, a subsequent orbit-drag kept using the stale identity-assuming quaternion while `camera.up` stayed non-standard, so `Object3D.lookAt` produced a roughly 90-degree horizon roll that persisted for the rest of that orbit session (it did not self-heal). Fixed by resetting `camera.up` back to `(0, 1, 0)` in an `onStart` handler on `<OrbitControls>`, at the start of every new orbit-drag gesture — mirroring the Godot side's existing `camera_up = Vector3.UP` reset in `_on_touch_begin`.
