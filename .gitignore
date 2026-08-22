@@ -6,5 +6,6 @@ venv/
 .pytest_cache/
 spikes/touch-spike-godot/smoke_test_screenshot.png
 spikes/touch-spike-godot/builds/
+spikes/touch-spike-godot/.godot/
 .claude/worktrees/
 .vscode/
