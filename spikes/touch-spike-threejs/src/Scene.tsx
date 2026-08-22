@@ -5,11 +5,18 @@ import type { ComponentInstance } from './component'
 
 export function Scene({
   onDragStateChange,
+  onSelectionChange,
 }: {
   onDragStateChange: (dragging: boolean) => void
+  onSelectionChange: (id: string | null) => void
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [instances] = useState<ComponentInstance[]>(INITIAL_BOARD_INSTANCES)
+
+  const select = (id: string | null) => {
+    setSelectedId(id)
+    onSelectionChange(id)
+  }
 
   return (
     <>
@@ -18,7 +25,7 @@ export function Scene({
       <gridHelper args={[120, 120, '#808080', '#808080']} />
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
-        onPointerDown={() => setSelectedId(null)}
+        onPointerDown={() => select(null)}
       >
         <planeGeometry args={[120, 120]} />
         <meshStandardMaterial transparent opacity={0} />
@@ -29,7 +36,7 @@ export function Scene({
           instance={instance}
           definition={BOARD_DEFINITION}
           selected={selectedId === instance.id}
-          onSelect={setSelectedId}
+          onSelect={select}
           onDragStateChange={onDragStateChange}
         />
       ))}
