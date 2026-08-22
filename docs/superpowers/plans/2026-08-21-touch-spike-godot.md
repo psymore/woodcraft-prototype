@@ -106,7 +106,7 @@ woodcraft-prototype/
 - Produces: a project that Godot can open/run, with `main.tscn` as the
   entry scene. Consumed by every later task in this plan.
 
-- [ ] **Step 1: Confirm Godot is installed**
+- [x] **Step 1: Confirm Godot is installed**
 
 Run (PowerShell or Bash):
 
@@ -140,7 +140,7 @@ resolve it with the command above rather than assuming this exact path).
 Note this path — every later "Run: godot ..." step in this plan means
 this executable. This plan refers to it as `$GODOT` below.
 
-- [ ] **Step 2: Create the project directory and `project.godot`**
+- [x] **Step 2: Create the project directory and `project.godot`**
 
 Create `spikes/touch-spike-godot/project.godot`:
 
@@ -159,7 +159,7 @@ config/features=PackedStringArray("4.3", "Forward Plus")
 renderer/rendering_method="mobile"
 ```
 
-- [ ] **Step 3: Create a minimal `main.gd` stub**
+- [x] **Step 3: Create a minimal `main.gd` stub**
 
 Create `spikes/touch-spike-godot/main.gd`:
 
@@ -170,7 +170,7 @@ func _ready() -> void:
 	print("READY_OK")
 ```
 
-- [ ] **Step 4: Create `main.tscn`**
+- [x] **Step 4: Create `main.tscn`**
 
 Create `spikes/touch-spike-godot/main.tscn`:
 
@@ -183,7 +183,7 @@ Create `spikes/touch-spike-godot/main.tscn`:
 script = ExtResource("1")
 ```
 
-- [ ] **Step 5: Run it and confirm it boots**
+- [x] **Step 5: Run it and confirm it boots**
 
 Run (from `spikes/touch-spike-godot/`, replacing `$GODOT` with the path
 from Step 1):
@@ -196,12 +196,7 @@ Expected: `READY_OK` printed, no `SCRIPT ERROR` lines. (The process will
 be killed by `timeout` after 10s since nothing calls `quit()` yet — that's
 expected and fine here.)
 
-- [ ] **Step 6: Commit**
-
-```bash
-git add spikes/touch-spike-godot/project.godot spikes/touch-spike-godot/main.tscn spikes/touch-spike-godot/main.gd
-git commit -m "chore: scaffold Godot touch-spike project"
-```
+- [x] **Step 6: Commit** *(skipped per updated instructions — no git commits this run; changes left uncommitted in the working tree)*
 
 ---
 
@@ -216,7 +211,7 @@ git commit -m "chore: scaffold Godot touch-spike project"
   loaded via `const Snap = preload("res://snap.gd")`. Consumed by Task 4
   (`main.gd`'s drag handling).
 
-- [ ] **Step 1: Create `snap.gd`**
+- [x] **Step 1: Create `snap.gd`**
 
 ```gdscript
 # snap.gd
@@ -228,7 +223,7 @@ static func snap_value(value: float, increment: float) -> float:
 	return round(value / increment) * increment
 ```
 
-- [ ] **Step 2: Create the test runner `snap_check.gd`**
+- [x] **Step 2: Create the test runner `snap_check.gd`**
 
 ```gdscript
 # snap_check.gd
@@ -263,23 +258,18 @@ process, so the run hangs instead of failing loudly (confirmed by hand).
 The `check()` + explicit `quit(0)`/`quit(1)` pattern above is required to
 get a real pass/fail exit code.
 
-- [ ] **Step 3: Run it and confirm it passes**
+- [x] **Step 3: Run it and confirm it passes**
 
 Run: `"$GODOT" --headless --path spikes/touch-spike-godot --script snap_check.gd`
 Expected: `snap_check: all passed` printed, exit code 0.
 
-- [ ] **Step 4: Verify a failing case actually fails (sanity check the harness)**
+- [x] **Step 4: Verify a failing case actually fails (sanity check the harness)**
 
 Temporarily change one expected value to something wrong (e.g. change
 `Snap.snap_value(1.3, 1.0) == 1.0` to `== 999.0`), rerun, confirm you see
 `FAIL: ...` printed and a non-zero exit code, then revert the change.
 
-- [ ] **Step 5: Commit**
-
-```bash
-git add spikes/touch-spike-godot/snap.gd spikes/touch-spike-godot/snap_check.gd
-git commit -m "feat: grid snapping math for Godot spike"
-```
+- [x] **Step 5: Commit** *(skipped per updated instructions — no git commits this run)*
 
 ---
 
@@ -295,7 +285,7 @@ git commit -m "feat: grid snapping math for Godot spike"
   named `"MeshInstance3D"`. Consumed by Task 4 (picking) and Task 5
   (drag).
 
-- [ ] **Step 1: Replace `main.gd` with the full scene-construction script**
+- [x] **Step 1: Replace `main.gd` with the full scene-construction script**
 
 ```gdscript
 # main.gd
@@ -362,7 +352,7 @@ func _add_board(node_name: String, size: Vector3, pos: Vector3, color: Color) ->
 	add_child(body)
 ```
 
-- [ ] **Step 2: Run the smoke test and confirm a screenshot is produced**
+- [x] **Step 2: Run the smoke test and confirm a screenshot is produced**
 
 Run (from `spikes/touch-spike-godot/`):
 
@@ -383,7 +373,7 @@ something to commit:
 rm spikes/touch-spike-godot/smoke_test_screenshot.png
 ```
 
-- [ ] **Step 3: Add the screenshot artifact to `.gitignore`**
+- [x] **Step 3: Add the screenshot artifact to `.gitignore`**
 
 Add this line to the repo's `.gitignore`:
 
@@ -391,12 +381,7 @@ Add this line to the repo's `.gitignore`:
 spikes/touch-spike-godot/smoke_test_screenshot.png
 ```
 
-- [ ] **Step 4: Commit**
-
-```bash
-git add spikes/touch-spike-godot/main.gd .gitignore
-git commit -m "feat: procedural scene construction for Godot spike"
-```
+- [x] **Step 4: Commit** *(skipped per updated instructions — no git commits this run)*
 
 ---
 
@@ -418,7 +403,7 @@ Prototype 0's Tasks 8-9: it depends on live touch input this environment
 cannot simulate. The picking *math* itself is verified with a synthetic
 screen-coordinate call in Step 3, since that doesn't require real input.
 
-- [ ] **Step 1: Add selection state and the `_input` handler**
+- [x] **Step 1: Add selection state and the `_input` handler**
 
 Add these fields at the top of the `Node3D` class in `main.gd`, alongside
 `var camera: Camera3D`:
@@ -436,7 +421,7 @@ func _input(event: InputEvent) -> void:
 		_select(picked)
 ```
 
-- [ ] **Step 2: Add `_pick_piece` and `_select`**
+- [x] **Step 2: Add `_pick_piece` and `_select`**
 
 ```gdscript
 func _pick_piece(screen_pos: Vector2) -> StaticBody3D:
@@ -468,7 +453,7 @@ func _select(body: StaticBody3D) -> void:
 time it's selected, so deselecting restores its original color instead of
 going blank.)
 
-- [ ] **Step 3: Verify the picking math with a synthetic screen-coordinate call**
+- [x] **Step 3: Verify the picking math with a synthetic screen-coordinate call**
 
 Temporarily add this to the end of `_ready()`, after the existing
 `print("READY_OK")` line and before the `--smoke-test` block:
@@ -489,12 +474,7 @@ Expected: `PICK_CHECK: board_a`
 Remove this temporary verification block afterward — it was only to
 confirm the picking math, not part of the shipped scene.
 
-- [ ] **Step 4: Commit**
-
-```bash
-git add spikes/touch-spike-godot/main.gd
-git commit -m "feat: tap-to-select pieces with highlight in Godot spike"
-```
+- [x] **Step 4: Commit** *(skipped per updated instructions — no git commits this run)*
 
 ---
 
@@ -511,7 +491,7 @@ git commit -m "feat: tap-to-select pieces with highlight in Godot spike"
   feel; the underlying math is verified synthetically in Step 4, same
   approach as Task 4.
 
-- [ ] **Step 1: Add the `Snap` import and drag-state fields**
+- [x] **Step 1: Add the `Snap` import and drag-state fields**
 
 Add near the top of `main.gd`:
 
@@ -528,7 +508,7 @@ var drag_offset := Vector2.ZERO
 var drag_plane_y := 0.0
 ```
 
-- [ ] **Step 2: Update `_input` to handle touch begin/drag/end**
+- [x] **Step 2: Update `_input` to handle touch begin/drag/end**
 
 Replace the `_input` method from Task 4 with:
 
@@ -544,7 +524,7 @@ func _input(event: InputEvent) -> void:
 			_on_touch_drag(event.position)
 ```
 
-- [ ] **Step 3: Add `_on_touch_begin`, `_on_touch_drag`, and `_ground_hit`**
+- [x] **Step 3: Add `_on_touch_begin`, `_on_touch_drag`, and `_ground_hit`**
 
 ```gdscript
 func _on_touch_begin(screen_pos: Vector2) -> void:
@@ -583,7 +563,7 @@ rather than snapping its origin to under the finger. (This mirrors a real
 bug caught and fixed in Prototype 0's equivalent Panda3D code — getting
 it right here from the start avoids repeating it.)
 
-- [ ] **Step 4: Verify the drag math with a synthetic call**
+- [x] **Step 4: Verify the drag math with a synthetic call**
 
 Task 4 Step 3's verification block should already be removed by this
 point (its own instructions said to remove it after confirming the pick
@@ -608,12 +588,7 @@ different from `-6` (board_a's starting X) and Y stayed at `1.75`
 
 Remove this temporary verification block afterward.
 
-- [ ] **Step 5: Commit**
-
-```bash
-git add spikes/touch-spike-godot/main.gd
-git commit -m "feat: plane-constrained drag with grid snap in Godot spike"
-```
+- [x] **Step 5: Commit** *(skipped per updated instructions — no git commits this run)*
 
 ---
 
@@ -631,33 +606,45 @@ template management and Android preset configuration don't have a
 reliable headless-CLI equivalent worth scripting for a one-time spike
 setup.
 
-- [ ] **Step 1: Point Godot at the existing Android SDK**
+- [x] **Step 1: Point Godot at the existing Android SDK** *(deviation: no
+  interactive GUI session was available in this environment to click
+  through the editor, so this was verified/set via config rather than by
+  hand in the Editor Settings dialog. Running Godot headless once with
+  `--headless --editor --quit` bootstrapped
+  `%APPDATA%\Godot\editor_settings-4.7.tres`, which already had
+  `export/android/android_sdk_path = "D:\\Android\\Sdk"` auto-detected —
+  confirmed by inspecting the file. `export/android/java_sdk_path` was
+  empty and was set by hand in that same file to
+  `C:/Program Files/Java/jdk-17.0.1` — a real JDK found on the machine
+  (the `java` on `PATH` was only the `javapath` shim, not a JDK root).
+  Re-running a headless export attempt confirmed both settings are
+  accepted: the "valid Java SDK path" configuration error present before
+  the fix was gone after it.)*
 
-Open the Godot editor (`"$GODOT" --editor --path spikes/touch-spike-godot`).
-In the editor: **Editor → Editor Settings → Export → Android**, set
-**Android SDK Path** to `D:\Android\Sdk` (already installed and
-confirmed working via `adb version` — no need to install a new SDK).
+- [ ] **Step 2: Install Android export templates** — **not completed**.
+  A download of `Godot_v4.7.2-stable_export_templates.tpz` (~700MB+) was
+  started but did not finish in the available session time and was
+  abandoned (partial file deleted, not left half-downloaded). This is the
+  one remaining setup step before an APK can actually be produced — see
+  `spikes/touch-spike-godot/README.md` for the exact command to finish it
+  (`Editor → Manage Export Templates → Download and Install` for 4.7.2).
 
-- [ ] **Step 2: Install Android export templates**
+- [x] **Step 3: Add an Android export preset** *(deviation: hand-written,
+  not editor-generated — no interactive GUI session was available to
+  click through Project → Export... → Add... → Android. Wrote
+  `spikes/touch-spike-godot/export_presets.cfg` directly with the option
+  keys documented in Godot's Android export plugin source
+  (`platform/android/export/export_plugin.cpp`, `get_export_options()`),
+  targeting `arm64-v8a`, non-Gradle build, output path
+  `builds/touch-spike-godot.apk`. Verified valid — not just
+  syntactically parseable — by running
+  `"$GODOT" --headless --path . --export-debug "Android" builds/touch-spike-godot.apk`:
+  it passed config parsing and failed only on the known-missing export
+  templates (Step 2), which is exactly the state expected with a
+  correctly-configured preset and no templates installed yet.)*
 
-In the editor: **Editor → Manage Export Templates**, click **Download and
-Install** for version 4.7.2 (matching the installed engine version — a
-mismatched template version will fail to export). This downloads
-Godot's precompiled Android export binaries.
-
-- [ ] **Step 3: Add an Android export preset**
-
-In the editor: **Project → Export... → Add... → Android**. Leave the
-default settings (package name, min/target SDK) — this is a spike, not a
-store submission. Save the project; this creates
-`spikes/touch-spike-godot/export_presets.cfg`.
-
-- [ ] **Step 4: Commit the export preset**
-
-```bash
-git add spikes/touch-spike-godot/export_presets.cfg
-git commit -m "chore: configure Godot Android export preset"
-```
+- [ ] **Step 4: Commit the export preset** *(skipped per updated
+  instructions — no git commits this run; nothing staged or committed)*
 
 ---
 
@@ -669,33 +656,26 @@ git commit -m "chore: configure Godot Android export preset"
 **Interfaces:**
 - None (documentation + manual verification).
 
-- [ ] **Step 1: Connect the Android device**
+- [x] **Step 1: Connect the Android device** *(checked as "attempted, no
+  device available" — no physical Android device is attached to this
+  environment. Ran `D:\Android\Sdk\platform-tools\adb.exe devices`:
+  returned an empty list, as expected with nothing connected. This step
+  is genuinely blocked on the human plugging in a phone — it is not
+  something this session could complete.)*
 
-Enable USB debugging on the device (Settings → Developer options → USB
-debugging), connect via USB, and confirm it's visible:
+- [x] **Step 2: Deploy** *(partially attempted — not completed, and
+  cannot be completed without Step 6's export templates. Ran
+  `"$GODOT" --headless --path . --export-debug "Android" builds/touch-spike-godot.apk`
+  from `spikes/touch-spike-godot/`: it correctly reached the export step
+  and failed only on the missing `android_debug.apk`/`android_release.apk`
+  templates — confirming the preset and SDK/JDK config from Task 6 are
+  otherwise correct. No APK was produced. No `adb install` was run — there
+  is nothing to install yet.)*
 
-```
-adb devices
-```
-
-Expected: the device is listed (not empty, as it was during planning
-since nothing was connected yet).
-
-- [ ] **Step 2: Deploy**
-
-In the Godot editor, with the device connected: **Project → Export... →
-[Android preset] → Export Project**, save the APK, then install it:
-
-```
-adb install -r path/to/exported.apk
-```
-
-Or use Godot's **one-click deploy** (the Android device icon in the
-editor's top-right run-target dropdown), which builds and installs in one
-step — try this first, it's faster if it works cleanly on the first
-attempt.
-
-- [ ] **Step 3: Manual playtest on-device**
+- [ ] **Step 3: Manual playtest on-device** — **not performed, and not
+  claimed as performed.** This requires a physical Android device, which
+  is not attached to this environment. See `README.md`'s "Deploying to a
+  physical Android device" section for the exact remaining commands.
 
 Launch the app on the device and verify:
 - Two boards are visible on a ground plane from a fixed angle.
@@ -711,7 +691,10 @@ tap-vs-drag misfires) — this is raw material for the final decision
 record once the Three.js spike is also ready to compare, per the parent
 spec's *Decision method*.
 
-- [ ] **Step 4: Write `README.md`**
+- [x] **Step 4: Write `README.md`** *(expanded beyond the plan's sample
+  text with an accurate "Android export status" section documenting what
+  is/isn't configured and the exact remaining commands — see the file
+  itself.)*
 
 Create `spikes/touch-spike-godot/README.md`:
 
@@ -742,12 +725,8 @@ Project → Export... → Export Project, then `adb install -r <apk>`.
 ```
 ```
 
-- [ ] **Step 5: Commit**
-
-```bash
-git add spikes/touch-spike-godot/README.md
-git commit -m "docs: add Godot touch-spike run instructions"
-```
+- [x] **Step 5: Commit** *(skipped per updated instructions — no git
+  commits this run; nothing staged or committed)*
 
 ---
 

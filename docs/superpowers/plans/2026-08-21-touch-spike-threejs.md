@@ -113,7 +113,7 @@ woodcraft-prototype/
 - Produces: a working `npm run build` and `npm run dev`. Every later task
   assumes this is already set up.
 
-- [ ] **Step 1: Scaffold the Vite + React + TypeScript project**
+- [x] **Step 1: Scaffold the Vite + React + TypeScript project**
 
 From the repo root:
 
@@ -123,7 +123,7 @@ cd spikes/touch-spike-threejs
 npm create vite@latest . -- --template react-ts
 ```
 
-- [ ] **Step 2: Install base dependencies, then pin Vite and the React plugin**
+- [x] **Step 2: Install base dependencies, then pin Vite and the React plugin**
 
 ```
 npm install
@@ -135,7 +135,7 @@ These exact pins matter — see this plan's *Verified Environment Notes*
 above for why `vite@latest`'s default (8.x at time of writing) fails to
 build on this machine's Node version.
 
-- [ ] **Step 3: Install the 3D dependencies**
+- [x] **Step 3: Install the 3D dependencies**
 
 ```
 npm install three@0.185.1 @react-three/fiber@9.7.0 @react-three/drei@10.7.8
@@ -143,14 +143,16 @@ npm install --save-dev @types/three@^0.185.4
 npm install --save-dev vitest
 ```
 
-- [ ] **Step 4: Confirm the scaffold builds clean**
+- [x] **Step 4: Confirm the scaffold builds clean**
 
 Run: `npm run build`
 Expected: `tsc -b && vite build` completes with `✓ built in ...s` and no
 errors (a "chunk larger than 500kB" warning is expected and fine — this
 is a spike, not a production bundle).
 
-- [ ] **Step 5: Add a `.gitignore` for the Node project**
+- [x] **Step 5: Add a `.gitignore` for the Node project** (scaffold already
+      produced a `.gitignore` covering `node_modules/` and `dist/` — a
+      superset of the plan's minimal version — left as-is)
 
 Create `spikes/touch-spike-threejs/.gitignore`:
 
@@ -159,15 +161,9 @@ node_modules/
 dist/
 ```
 
-- [ ] **Step 6: Commit**
-
-```bash
-git add spikes/touch-spike-threejs/
-git commit -m "chore: scaffold Three.js/R3F touch-spike project"
-```
-
-(This will include the full scaffolded template output plus
-`package-lock.json` — that's expected for the initial commit.)
+- [x] **Step 6: Commit** — SKIPPED per explicit coordinator instruction:
+      no git commits during this run. Changes left uncommitted in the
+      working tree.
 
 ---
 
@@ -181,7 +177,7 @@ git commit -m "chore: scaffold Three.js/R3F touch-spike project"
 - Produces: `snapValue(value: number, increment: number): number`.
   Consumed by Task 5 (`Board.tsx`'s drag handling).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // src/snap.test.ts
@@ -207,12 +203,12 @@ describe('snapValue', () => {
 })
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npx vitest run src/snap.test.ts`
 Expected: FAIL — `Cannot find module './snap'` (or similar).
 
-- [ ] **Step 3: Implement `snap.ts`**
+- [x] **Step 3: Implement `snap.ts`**
 
 ```typescript
 // src/snap.ts
@@ -222,17 +218,13 @@ export function snapValue(value: number, increment: number): number {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npx vitest run src/snap.test.ts`
 Expected: 3 passed.
 
-- [ ] **Step 5: Commit**
-
-```bash
-git add spikes/touch-spike-threejs/src/snap.ts spikes/touch-spike-threejs/src/snap.test.ts
-git commit -m "feat: grid snapping math for Three.js spike"
-```
+- [x] **Step 5: Commit** — SKIPPED per explicit coordinator instruction:
+      no git commits during this run.
 
 ---
 
@@ -248,7 +240,7 @@ git commit -m "feat: grid snapping math for Three.js spike"
   `<Canvas>` with a fixed camera. Consumed by Task 4 (adds selection) and
   Task 5 (adds drag).
 
-- [ ] **Step 1: Replace `src/App.tsx`**
+- [x] **Step 1: Replace `src/App.tsx`**
 
 ```tsx
 // src/App.tsx
@@ -272,7 +264,7 @@ export default App
 mobile browser intercepts single-finger drags as page scroll/zoom before
 they ever reach the canvas's pointer events.
 
-- [ ] **Step 2: Create `src/Scene.tsx`**
+- [x] **Step 2: Create `src/Scene.tsx`**
 
 ```tsx
 // src/Scene.tsx
@@ -308,23 +300,21 @@ export function Scene() {
 }
 ```
 
-- [ ] **Step 3: Verify the build still passes**
+- [x] **Step 3: Verify the build still passes**
 
-Run: `npm run build`
-Expected: builds clean, same as Task 1 Step 4.
+Run: `npm run build` — builds clean (chunk-size warning only, expected).
 
-- [ ] **Step 4: Manual visual check**
+- [x] **Step 4: Manual visual check** — PARTIAL: no browser/screenshot
+      tool available in this headless execution environment. Verified
+      instead via `npm run dev` + curl: server started clean, `/src/App.tsx`
+      and `/src/Scene.tsx` both transform with HTTP 200 (no compile
+      errors), and `tsc -b` (part of `npm run build`) passed with no type
+      errors. Dev server was stopped afterward. True visual confirmation
+      (two boxes on a plane) is deferred to the human's on-device playtest
+      in Task 6.
 
-Run: `npm run dev`, open `http://localhost:5173/` in a desktop browser.
-Expected: two brown/tan boxes resting on a gray plane, viewed from an
-elevated angle. Stop the dev server afterward (Ctrl+C).
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add spikes/touch-spike-threejs/src/App.tsx spikes/touch-spike-threejs/src/Scene.tsx
-git commit -m "feat: scene construction with hardcoded boards for Three.js spike"
-```
+- [x] **Step 5: Commit** — SKIPPED per explicit coordinator instruction:
+      no git commits during this run.
 
 ---
 
@@ -345,7 +335,7 @@ reasoning as Prototype 0's equivalent tasks — it depends on live touch
 input this environment can't simulate. The build/type-check step is the
 automated gate.
 
-- [ ] **Step 1: Create `src/Board.tsx`**
+- [x] **Step 1: Create `src/Board.tsx`**
 
 ```tsx
 // src/Board.tsx
@@ -378,7 +368,7 @@ export function Board({
 }
 ```
 
-- [ ] **Step 2: Update `src/Scene.tsx` to track selection and render `<Board>`**
+- [x] **Step 2: Update `src/Scene.tsx` to track selection and render `<Board>`**
 
 Replace the `Scene` function (keep `BoardData`/`BOARDS` as they are):
 
@@ -425,24 +415,15 @@ plane is behind/below the boards, so a tap on a board never reaches it
 `Board`'s handler calls `e.stopPropagation()` specifically to prevent a
 board tap from also reaching the ground plane underneath it).
 
-- [ ] **Step 3: Verify the build still passes**
+- [x] **Step 3: Verify the build still passes** — builds clean.
 
-Run: `npm run build`
-Expected: builds clean.
+- [x] **Step 4: Manual visual check** — DEFERRED: no browser available in
+      this headless execution environment; `tsc -b` type-checks the
+      pointer-event handler wiring cleanly. Actual click/tap behavior is
+      verified by the human during Task 6's on-device playtest.
 
-- [ ] **Step 4: Manual visual check**
-
-Run: `npm run dev`, open in a desktop browser, click each board with the
-mouse (R3F's pointer events work identically for mouse and touch).
-Expected: clicking a board turns it orange; clicking the other board
-moves the highlight; clicking the empty gray plane clears it.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add spikes/touch-spike-threejs/src/Board.tsx spikes/touch-spike-threejs/src/Scene.tsx
-git commit -m "feat: tap-to-select boards with highlight in Three.js spike"
-```
+- [x] **Step 5: Commit** — SKIPPED per explicit coordinator instruction:
+      no git commits during this run.
 
 ---
 
@@ -459,7 +440,7 @@ git commit -m "feat: tap-to-select boards with highlight in Three.js spike"
   `THREE.Ray`/`THREE.Plane` math, no React/DOM involved) before this plan
   was written.
 
-- [ ] **Step 1: Replace `src/Board.tsx` with the full drag-aware version**
+- [x] **Step 1: Replace `src/Board.tsx` with the full drag-aware version**
 
 ```tsx
 // src/Board.tsx
@@ -532,31 +513,20 @@ export function Board({
 }
 ```
 
-- [ ] **Step 2: Verify the build/type-check passes**
+- [x] **Step 2: Verify the build/type-check passes** — builds clean; no
+      `setPointerCapture` type error, confirming the `(e.target as
+      Element)` cast resolves the documented type-definition gap.
 
-Run: `npm run build`
-Expected: builds clean. If you see `Property 'setPointerCapture' does not
-exist on type 'EventTarget'`, confirm the `(e.target as Element)` casts
-are present exactly as above — this is the known type-definition gap
-documented in this plan's *Verified Environment Notes*.
+- [x] **Step 3: Manual check with mouse (desktop proxy for touch)** —
+      DEFERRED: no browser available in this headless execution
+      environment. The `e.ray`-based plane-intersection math was already
+      independently verified by hand per the plan's own Interfaces note
+      (pure `THREE.Ray`/`THREE.Plane` math, no React/DOM involved); actual
+      interactive drag feel is verified by the human during Task 6's
+      on-device playtest.
 
-- [ ] **Step 3: Manual check with mouse (desktop proxy for touch)**
-
-Run: `npm run dev`, open in a desktop browser. Click and hold a board,
-then move the mouse away from the board's own silhouette while still
-holding the button. Expected: the board keeps following the cursor's
-position projected onto the ground plane, snapped to whole-number grid
-steps, even once the cursor is no longer directly over the board's mesh
-(this specifically exercises the pointer-capture staleness fix — if
-`e.point` had been used instead of `e.ray`, the board would freeze in
-place the moment the cursor left its silhouette).
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add spikes/touch-spike-threejs/src/Board.tsx
-git commit -m "feat: plane-constrained drag with grid snap in Three.js spike"
-```
+- [x] **Step 4: Commit** — SKIPPED per explicit coordinator instruction:
+      no git commits during this run.
 
 ---
 
@@ -568,7 +538,11 @@ git commit -m "feat: plane-constrained drag with grid snap in Three.js spike"
 **Interfaces:**
 - None (documentation + manual verification).
 
-- [ ] **Step 1: Start the dev server exposed on the LAN**
+- [x] **Step 1: Start the dev server exposed on the LAN** — confirmed:
+      `npm run dev -- --host` printed `Network: http://192.168.1.127:5173/`
+      alongside `Local: http://localhost:5173/`. Server was stopped
+      immediately after (port 5173 confirmed no longer listening) — see
+      Step 2/3 notes below for why it wasn't left running.
 
 ```
 cd spikes/touch-spike-threejs
@@ -579,7 +553,11 @@ Expected output includes a `Network:` URL (e.g.
 `http://192.168.1.127:5173/`) alongside the `Local:` one — note the exact
 IP:port shown, it'll differ by machine/network.
 
-- [ ] **Step 2: Open it on the Android device**
+- [ ] **Step 2: Open it on the Android device** — NOT DONE: requires a
+      physical Android device and a human to operate it, which this
+      execution environment does not have. This is the human's remaining
+      manual step (see README's "Running" section for the exact
+      commands).
 
 Ensure the phone is on the same Wi-Fi network as this machine, then open
 the `Network:` URL from Step 1 in the phone's mobile browser.
@@ -591,7 +569,11 @@ both devices are actually on the same network segment (some routers
 isolate Wi-Fi clients from each other — "AP/client isolation" — which
 would block this regardless of firewall settings).
 
-- [ ] **Step 3: Manual playtest on-device**
+- [ ] **Step 3: Manual playtest on-device** — NOT DONE, same reason as
+      Step 2: no physical Android device available in this environment.
+      This is a hard stop per the task instructions — do not claim this
+      happened. Remains for the human to perform and record impressions
+      of, per the parent spec's *Decision method*.
 
 Verify:
 - Two boards are visible on a ground plane from a fixed angle.
@@ -609,7 +591,7 @@ tap-vs-drag misfires, and how this compares to opening a page vs. the
 Godot spike's install step) — this is raw material for the final decision
 record, per the parent spec's *Decision method*.
 
-- [ ] **Step 4: Write `README.md`**
+- [x] **Step 4: Write `README.md`**
 
 Create `spikes/touch-spike-threejs/README.md`:
 
@@ -644,12 +626,8 @@ npm run build
 ```
 ```
 
-- [ ] **Step 5: Commit**
-
-```bash
-git add spikes/touch-spike-threejs/README.md
-git commit -m "docs: add Three.js touch-spike run instructions"
-```
+- [x] **Step 5: Commit** — SKIPPED per explicit coordinator instruction:
+      no git commits during this run.
 
 ---
 
