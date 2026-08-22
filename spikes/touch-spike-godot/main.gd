@@ -29,7 +29,7 @@ var pan_zoom_prev_distance := 0.0
 var frame_selected_button: Button
 
 
-func _input(event: InputEvent) -> void:
+func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			active_touches[event.index] = event.position
