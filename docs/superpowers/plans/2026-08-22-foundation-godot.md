@@ -4,7 +4,7 @@
 
 **Goal:** Add a camera/view system, an engine-agnostic component data model, and a minimal view-control bar to `spikes/touch-spike-godot/`, while migrating the two existing hardcoded boards onto the new data model without regressing tap-select/drag-move.
 
-**Architecture:** New rendering-free GDScript modules (`component_definition.gd`, `component_instance.gd`, `components.gd`, `camera_orbit.gd`, `view_presets.gd`) hold data/math, loaded via `preload()` (matching the existing `snap.gd` convention, which deliberately avoids `class_name` to sidestep editor class-registration ordering risk) and verified with headless `SceneTree`-script checks (matching the existing `snap_check.gd` pattern — there is no unit-test framework installed, so this is the established convention to follow). `main.gd`'s `_input` is extended to track multiple simultaneous touches by index, so a single finger on empty space orbits, a single finger on a piece drags it (existing behavior, unchanged), and two fingers pan/zoom the camera. Unlike the Three.js side (which reuses `@react-three/drei`'s `OrbitControls`), Godot has no built-in orbit-camera addon, so the orbit/pan/zoom interaction itself is hand-rolled here — this asymmetry in implementation effort is itself relevant data for the engine comparison, not a bug to paper over.
+**Architecture:** New rendering-free GDScript modules (`component_definition.gd`, `component_instance.gd`, `components.gd`, `camera_orbit.gd`, `view_presets.gd`) hold data/math, loaded via `preload()` (matching the existing `snap.gd` convention, which deliberately avoids `class_name` to sidestep editor class-registration ordering risk). `main.gd`'s `_input` is extended to track multiple simultaneous touches by index, so a single finger on empty space orbits, a single finger on a piece drags it (existing behavior, unchanged), and two fingers pan/zoom the camera. Unlike the Three.js side (which reuses `@react-three/drei`'s `OrbitControls`), Godot has no built-in orbit-camera addon, so the orbit/pan/zoom interaction itself is hand-rolled here — this asymmetry in implementation effort is itself relevant data for the engine comparison, not a bug to paper over.
 
 **Tech Stack:** Godot Engine 4.7.2, GDScript. No addons added.
 
@@ -12,6 +12,7 @@
 
 ## Global Constraints
 
+- **No automated tests this session, for either engine** (explicit user decision, 2026-08-22, overriding this plan's original TDD structure): no new headless `SceneTree`-script checks. Verification is manual/visual only, via the Godot editor/desktop run and (where noted) a physical device or emulator. The existing `snap_check.gd` is untouched but not a gate for these tasks.
 - One-finger drag on empty space = orbit; two-finger drag = pan; pinch = zoom; tap a piece = select; tap empty space = deselect. Object-drag and camera-drag must never both fire from the same gesture.
 - Coordinate system is Y = up, X = left/right, Z = depth (already the case in this codebase).
 - Geometry is procedural from dimensions — never swap meshes/assets when dimensions change.
@@ -29,7 +30,6 @@
 - Create: `spikes/touch-spike-godot/component_definition.gd`
 - Create: `spikes/touch-spike-godot/component_instance.gd`
 - Create: `spikes/touch-spike-godot/components.gd`
-- Test: `spikes/touch-spike-godot/component_check.gd`
 
 **Interfaces:**
 - Consumes: nothing (leaf modules).
@@ -123,60 +123,14 @@ static func box_size(instance: ComponentInstance) -> Vector3:
 	)
 ```
 
-- [ ] **Step 4: Write the headless check script**
-
-```gdscript
-# component_check.gd
-extends SceneTree
-
-const Components = preload("res://components.gd")
-
-func check(condition: bool, message: String) -> bool:
-	if not condition:
-		printerr("FAIL: ", message)
-	return condition
-
-func _initialize() -> void:
-	var all_passed := true
-
-	var board_def := Components.board_definition()
-	all_passed = check(board_def.category == "WOOD", "board_definition category is WOOD") and all_passed
-	all_passed = check(board_def.geometry_shape == "box", "board_definition geometry_shape is box") and all_passed
-	all_passed = check(board_def.default_dimensions == {"thickness": 1.5, "width": 3.5, "length": 48.0}, "board_definition default_dimensions") and all_passed
-	all_passed = check(board_def.connection_points == [], "board_definition connection_points starts empty") and all_passed
-	all_passed = check(board_def.structural_properties == {}, "board_definition structural_properties starts empty") and all_passed
-	all_passed = check(board_def.explode_direction == null, "board_definition explode_direction starts null") and all_passed
-
-	var instances := Components.initial_board_instances()
-	all_passed = check(instances.size() == 2, "initial_board_instances has 2 entries") and all_passed
-	all_passed = check(instances[0].id == "board_a", "instance 0 id is board_a") and all_passed
-	all_passed = check(instances[0].position == Vector3(-6, 1.75, 0), "instance 0 position matches existing board_a") and all_passed
-	all_passed = check(instances[1].id == "board_b", "instance 1 id is board_b") and all_passed
-	all_passed = check(instances[1].position == Vector3(6, 1.75, 0), "instance 1 position matches existing board_b") and all_passed
-
-	all_passed = check(Components.box_size(instances[0]) == Vector3(1.5, 3.5, 48.0), "box_size(board_a) matches existing BoxShape3D size") and all_passed
-	all_passed = check(Components.box_size(instances[1]) == Vector3(1.5, 3.5, 36.0), "box_size(board_b) matches existing BoxShape3D size") and all_passed
-
-	if all_passed:
-		print("component_check: all passed")
-		quit(0)
-	else:
-		printerr("component_check: FAILED")
-		quit(1)
-```
-
-- [ ] **Step 5: Run the check and verify it fails first, for the wrong reason if files are missing, then passes**
-
-Run: `"$GODOT" --headless --path spikes/touch-spike-godot --script component_check.gd`
-(Replace `$GODOT` with the Godot 4.7.2 executable path used elsewhere in this repo, e.g. as run in `spikes/touch-spike-godot/README.md`.)
-Expected before Steps 1-3 exist: FAIL to parse (`Could not resolve script "res://components.gd"`). After Steps 1-4: `component_check: all passed`, exit code 0.
-
-- [ ] **Step 6: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add spikes/touch-spike-godot/component_definition.gd spikes/touch-spike-godot/component_instance.gd spikes/touch-spike-godot/components.gd spikes/touch-spike-godot/component_check.gd
+git add spikes/touch-spike-godot/component_definition.gd spikes/touch-spike-godot/component_instance.gd spikes/touch-spike-godot/components.gd
 git commit -m "feat(godot-spike): add ComponentDefinition/ComponentInstance data model"
 ```
+
+(Verification for this task happens visually in Task 2, once `main.gd` actually constructs pieces from these modules — there's no rendering or interaction here to check standalone, and this session skips automated headless checks.)
 
 ---
 
@@ -232,17 +186,12 @@ func _add_piece(instance, definition) -> void:
 	add_child(body)
 ```
 
-- [ ] **Step 2: Run the existing checks**
-
-Run: `"$GODOT" --headless --path spikes/touch-spike-godot --script snap_check.gd && "$GODOT" --headless --path spikes/touch-spike-godot --script component_check.gd`
-Expected: both print `all passed` and exit 0 (this task doesn't change either module's behavior, just how `main.gd` constructs pieces from them).
-
-- [ ] **Step 3: Manual regression check**
+- [ ] **Step 2: Manual regression check**
 
 Run: `"$GODOT" --path spikes/touch-spike-godot` (desktop run).
 Verify: two boards render at the same positions/sizes/colors as before (`board_a` on the left, `board_b` on the right); clicking a board highlights it orange; dragging a selected board moves it snapped to the 1" grid; clicking empty space deselects. This must look and behave identically to before this task.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
 git add spikes/touch-spike-godot/main.gd
@@ -256,11 +205,10 @@ git commit -m "refactor(godot-spike): migrate boards onto ComponentDefinition/Co
 **Files:**
 - Create: `spikes/touch-spike-godot/camera_orbit.gd`
 - Create: `spikes/touch-spike-godot/view_presets.gd`
-- Test: `spikes/touch-spike-godot/camera_orbit_check.gd`
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `CameraOrbit.clamp_polar`, `CameraOrbit.clamp_radius`, `CameraOrbit.orbit_to_position`, `CameraOrbit.position_to_orbit`, `CameraOrbit.compute_bounds`; `ViewPresets.preset(view_name: String) -> Dictionary` — all consumed by Task 4.
+- Produces: `CameraOrbit.clamp_polar`, `CameraOrbit.clamp_radius`, `CameraOrbit.orbit_to_position`, `CameraOrbit.position_to_orbit`, `CameraOrbit.compute_bounds`; `ViewPresets.preset(view_name: String) -> Dictionary`, `ViewPresets.view_names() -> Array` — all consumed by Task 4.
 
 - [ ] **Step 1: Write `camera_orbit.gd`**
 
@@ -337,66 +285,14 @@ static func view_names() -> Array:
 	return ["3d", "front", "back", "left", "right", "top", "bottom"]
 ```
 
-- [ ] **Step 3: Write the headless check script**
-
-```gdscript
-# camera_orbit_check.gd
-extends SceneTree
-
-const CameraOrbit = preload("res://camera_orbit.gd")
-const ViewPresets = preload("res://view_presets.gd")
-
-func check(condition: bool, message: String) -> bool:
-	if not condition:
-		printerr("FAIL: ", message)
-	return condition
-
-func vec3_close(a: Vector3, b: Vector3, eps: float = 0.001) -> bool:
-	return a.distance_to(b) < eps
-
-func _initialize() -> void:
-	var all_passed := true
-
-	all_passed = check(CameraOrbit.clamp_polar(-1.0) == CameraOrbit.MIN_POLAR, "clamp_polar floors at MIN_POLAR") and all_passed
-	all_passed = check(CameraOrbit.clamp_polar(10.0) == CameraOrbit.MAX_POLAR, "clamp_polar ceils at MAX_POLAR") and all_passed
-	all_passed = check(CameraOrbit.clamp_radius(1.0) == CameraOrbit.MIN_RADIUS, "clamp_radius floors at MIN_RADIUS") and all_passed
-	all_passed = check(CameraOrbit.clamp_radius(1000.0) == CameraOrbit.MAX_RADIUS, "clamp_radius ceils at MAX_RADIUS") and all_passed
-
-	var pos := CameraOrbit.orbit_to_position(Vector3.ZERO, 0.0, PI / 2.0, 10.0)
-	all_passed = check(vec3_close(pos, Vector3(0, 0, 10)), "orbit_to_position(azimuth=0, polar=90deg) faces +Z") and all_passed
-
-	var orbit := CameraOrbit.position_to_orbit(Vector3(0, 20, 25), Vector3.ZERO)
-	var round_trip := CameraOrbit.orbit_to_position(Vector3.ZERO, orbit.azimuth, orbit.polar, orbit.radius)
-	all_passed = check(vec3_close(round_trip, Vector3(0, 20, 25)), "position_to_orbit/orbit_to_position round-trip the current fixed camera position") and all_passed
-
-	var bounds := CameraOrbit.compute_bounds([Vector3(-6, 1.75, 0), Vector3(6, 1.75, 0)])
-	all_passed = check(vec3_close(bounds.center, Vector3(0, 1.75, 0)), "compute_bounds centers on the two boards") and all_passed
-	all_passed = check(absf(bounds.radius - 6.0) < 0.001, "compute_bounds radius is the max distance from center") and all_passed
-
-	var top_preset := ViewPresets.preset("top")
-	all_passed = check(top_preset.position == Vector3(0, ViewPresets.DISTANCE, 0), "top preset looks straight down") and all_passed
-	all_passed = check(top_preset.up == Vector3(0, 0, -1), "top preset uses an alternate up vector to avoid gimbal lock") and all_passed
-	all_passed = check(ViewPresets.view_names().size() == 7, "view_names lists all 7 presets") and all_passed
-
-	if all_passed:
-		print("camera_orbit_check: all passed")
-		quit(0)
-	else:
-		printerr("camera_orbit_check: FAILED")
-		quit(1)
-```
-
-- [ ] **Step 4: Run the check**
-
-Run: `"$GODOT" --headless --path spikes/touch-spike-godot --script camera_orbit_check.gd`
-Expected: `camera_orbit_check: all passed`, exit code 0.
-
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add spikes/touch-spike-godot/camera_orbit.gd spikes/touch-spike-godot/view_presets.gd spikes/touch-spike-godot/camera_orbit_check.gd
+git add spikes/touch-spike-godot/camera_orbit.gd spikes/touch-spike-godot/view_presets.gd
 git commit -m "feat(godot-spike): add pure camera orbit/view-preset/frame-bounds math"
 ```
+
+(Verification for this task happens visually in Task 4, once `main.gd` actually drives the camera and view bar from these modules — there's no rendering or interaction here to check standalone, and this session skips automated headless checks.)
 
 ---
 
@@ -409,7 +305,7 @@ git commit -m "feat(godot-spike): add pure camera orbit/view-preset/frame-bounds
 - Consumes: `CameraOrbit.*` and `ViewPresets.*` from Task 3.
 - Produces: nothing consumed by later tasks in this plan (this is the top-level wiring).
 
-This task is engine wiring (input handling + procedurally-built UI) that isn't meaningfully unit-testable — verification is manual, per the spec's own testing section. `main.gd`'s `_input`, `_ready()`, `_select()`, and state variables all change; the full replacement content is given below rather than a diff, since the changes are pervasive.
+This task is engine wiring (input handling + procedurally-built UI) that isn't meaningfully unit-testable — verification is manual. `main.gd`'s `_input`, `_ready()`, `_select()`, and state variables all change; the full replacement content is given below rather than a diff, since the changes are pervasive.
 
 - [ ] **Step 1: Replace the top-of-file state and add the new preloads**
 
@@ -643,16 +539,11 @@ func _select(body: StaticBody3D) -> void:
 		frame_selected_button.disabled = selected_body == null
 ```
 
-- [ ] **Step 6: Delete the now-superseded `_pick_piece`/`_ground_hit` duplication check**
+- [ ] **Step 6: Confirm `_pick_piece`/`_ground_hit` are unchanged**
 
 No change needed to `_pick_piece` or `_ground_hit` — both are reused as-is by `_on_touch_begin`/`_on_piece_drag` above. Confirm they still exist unmodified below the new functions.
 
-- [ ] **Step 7: Run the existing checks**
-
-Run: `"$GODOT" --headless --path spikes/touch-spike-godot --script snap_check.gd && "$GODOT" --headless --path spikes/touch-spike-godot --script component_check.gd && "$GODOT" --headless --path spikes/touch-spike-godot --script camera_orbit_check.gd`
-Expected: all three print `all passed` and exit 0.
-
-- [ ] **Step 8: Manual verification (desktop, mouse via touch emulation)**
+- [ ] **Step 7: Manual verification (desktop, mouse via touch emulation)**
 
 Run: `"$GODOT" --path spikes/touch-spike-godot`.
 Verify:
@@ -661,16 +552,16 @@ Verify:
 - Each of the 7 view buttons snaps the camera to a distinct, correctly-oriented view (front/back and left/right should look like mirror-image profiles; top/bottom should look straight down/up without flipping upside down).
 - Clicking a board then "FRAME SEL" frames just that board; "FRAME ALL" frames both; "FRAME SEL" is disabled with nothing selected.
 - Deselecting (click empty space) still works.
-- Note: two-finger pan/pinch-zoom cannot be exercised this way (see Global Constraints) — covered in Step 9.
+- Note: two-finger pan/pinch-zoom cannot be exercised this way (see Global Constraints) — covered in Step 8.
 
-- [ ] **Step 9: Manual verification (physical Android device or emulator)**
+- [ ] **Step 8: Manual verification (physical Android device or emulator)**
 
 Per the existing `spikes/touch-spike-godot/README.md` device-testing instructions, run on a real device or the Android emulator and verify:
 - One-finger drag on empty space orbits; one-finger drag on a board moves it.
 - Two-finger drag pans; pinch zooms.
 - View buttons and Frame All/Selected respond to taps.
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add spikes/touch-spike-godot/main.gd
@@ -681,6 +572,7 @@ git commit -m "feat(godot-spike): wire multi-touch orbit/pan/zoom and view-contr
 
 ## Self-review notes
 
-- **Spec coverage:** data model (Task 1), camera/view system incl. the hit-target gating (Tasks 3-4), view-control bar (Task 4), regression/migration (Task 2), testing — headless (Tasks 1/3) + manual (Task 4) — all covered. Inventory/inspector/hardware/assembly/exploded-view/structural-check are explicitly out of scope per the spec and have no tasks here.
-- **Known asymmetry (documented, not silently dropped):** Three.js reuses `@react-three/drei`'s `OrbitControls`; Godot hand-rolls the equivalent because no orbit-camera addon is installed. This is itself a data point for the eventual engine comparison (sub-project 8 in the parent spec's roadmap terms), not an inconsistency to fix.
-- **Known limitation:** two-finger gestures cannot be verified on desktop because `pointing/emulate_touch_from_mouse` only ever synthesizes a single touch — Task 4 Step 9 requires a physical device/emulator pass before this task can be called done.
+- **Spec coverage:** data model (Task 1), camera/view system incl. the hit-target gating (Tasks 3-4), view-control bar (Task 4), regression/migration (Task 2), manual verification (Task 4) — all covered. Inventory/inspector/hardware/assembly/exploded-view/structural-check are explicitly out of scope per the spec and have no tasks here.
+- **Deliberate scope change from the original plan (2026-08-22, user decision):** all automated-test steps (headless `SceneTree`-script checks) were removed for this prototyping session. Every task's verification is now manual/visual. This is a decision, not an oversight — the spec's own "Testing" subsection for Sub-project 1 listed automated checks, but the user overrode that in favor of manual testing for the duration of this session.
+- **Known asymmetry (documented, not silently dropped):** Three.js reuses `@react-three/drei`'s `OrbitControls`; Godot hand-rolls the equivalent because no orbit-camera addon is installed. This is itself a data point for the eventual engine comparison, not an inconsistency to fix.
+- **Known limitation:** two-finger gestures cannot be verified on desktop because `pointing/emulate_touch_from_mouse` only ever synthesizes a single touch — Task 4 Step 8 requires a physical device/emulator pass before this task can be called done.
