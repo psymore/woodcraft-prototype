@@ -1,22 +1,27 @@
 import { useRef, useState } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
-import type { BoardData } from './Scene'
+import type { ComponentDefinition, ComponentInstance } from './component'
+import { getBoxSize } from './component'
 import { snapValue } from './snap'
 
 const GRID_INCREMENT = 1
 const GROUND_PLANE = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
 
 export function Board({
-  data,
+  instance,
+  definition,
   selected,
   onSelect,
+  onDragStateChange,
 }: {
-  data: BoardData
+  instance: ComponentInstance
+  definition: ComponentDefinition
   selected: boolean
   onSelect: (id: string) => void
+  onDragStateChange: (dragging: boolean) => void
 }) {
-  const [pos, setPos] = useState(data.position)
+  const [pos, setPos] = useState(instance.position)
   const dragging = useRef(false)
   const dragOffset = useRef<[number, number]>([0, 0])
 
@@ -28,8 +33,9 @@ export function Board({
   const handlePointerDown = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation()
     ;(e.target as Element).setPointerCapture(e.pointerId)
-    onSelect(data.id)
+    onSelect(instance.id)
     dragging.current = true
+    onDragStateChange(true)
     const hit = groundHit(e.ray)
     dragOffset.current = hit ? [pos[0] - hit.x, pos[2] - hit.z] : [0, 0]
   }
@@ -38,8 +44,7 @@ export function Board({
     if (!dragging.current) return
     // Deliberately e.ray, not e.point: once the pointer is captured,
     // e.point/e.object replay a stale intersection from pick time if the
-    // live raycast no longer hits this mesh. e.ray is always live. See
-    // this plan's Verified Environment Notes for why.
+    // live raycast no longer hits this mesh. e.ray is always live.
     const hit = groundHit(e.ray)
     if (!hit) return
     const [offsetX, offsetZ] = dragOffset.current
@@ -50,8 +55,12 @@ export function Board({
 
   const handlePointerUp = (e: ThreeEvent<PointerEvent>) => {
     dragging.current = false
+    onDragStateChange(false)
     ;(e.target as Element).releasePointerCapture(e.pointerId)
   }
+
+  const size = getBoxSize(instance)
+  void definition // threaded through for future sub-projects (materials, geometry variants); unused this phase beyond its instance override
 
   return (
     <mesh
@@ -60,8 +69,8 @@ export function Board({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
     >
-      <boxGeometry args={data.size} />
-      <meshStandardMaterial color={selected ? '#ffb347' : data.color} />
+      <boxGeometry args={size} />
+      <meshStandardMaterial color={selected ? '#ffb347' : instance.material} />
     </mesh>
   )
 }

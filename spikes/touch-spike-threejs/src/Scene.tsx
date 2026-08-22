@@ -1,20 +1,15 @@
 import { useState } from 'react'
 import { Board } from './Board'
+import { BOARD_DEFINITION, INITIAL_BOARD_INSTANCES } from './component'
+import type { ComponentInstance } from './component'
 
-export type BoardData = {
-  id: string
-  size: [number, number, number] // width, height, depth (Three.js BoxGeometry order)
-  position: [number, number, number]
-  color: string
-}
-
-export const BOARDS: BoardData[] = [
-  { id: 'board-a', size: [1.5, 3.5, 48], position: [-6, 1.75, 0], color: '#a6693f' },
-  { id: 'board-b', size: [1.5, 3.5, 36], position: [6, 1.75, 0], color: '#8c5730' },
-]
-
-export function Scene() {
+export function Scene({
+  onDragStateChange,
+}: {
+  onDragStateChange: (dragging: boolean) => void
+}) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [instances] = useState<ComponentInstance[]>(INITIAL_BOARD_INSTANCES)
 
   return (
     <>
@@ -28,12 +23,14 @@ export function Scene() {
         <planeGeometry args={[120, 120]} />
         <meshStandardMaterial transparent opacity={0} />
       </mesh>
-      {BOARDS.map((board) => (
+      {instances.map((instance) => (
         <Board
-          key={board.id}
-          data={board}
-          selected={selectedId === board.id}
+          key={instance.id}
+          instance={instance}
+          definition={BOARD_DEFINITION}
+          selected={selectedId === instance.id}
           onSelect={setSelectedId}
+          onDragStateChange={onDragStateChange}
         />
       ))}
     </>

@@ -5,7 +5,7 @@ function App() {
   return (
     <div style={{ width: '100vw', height: '100vh', touchAction: 'none' }}>
       <Canvas camera={{ position: [0, 20, 25], fov: 50 }}>
-        <Scene />
+        <Scene onDragStateChange={() => {}} />
       </Canvas>
     </div>
   )
