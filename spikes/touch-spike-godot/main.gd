@@ -2,6 +2,7 @@
 extends Node3D
 
 const Snap = preload("res://snap.gd")
+const Components = preload("res://components.gd")
 const GRID_INCREMENT := 1.0
 const GRID_EXTENT := 60.0  # inches, half-width of the drawn ground grid
 
@@ -36,8 +37,9 @@ func _ready() -> void:
 	ground.material_override = ground_material
 	add_child(ground)
 
-	_add_board("board_a", Vector3(1.5, 3.5, 48.0), Vector3(-6, 1.75, 0), Color(0.65, 0.45, 0.25))
-	_add_board("board_b", Vector3(1.5, 3.5, 36.0), Vector3(6, 1.75, 0), Color(0.55, 0.37, 0.20))
+	var board_definition := Components.board_definition()
+	for instance in Components.initial_board_instances():
+		_add_piece(instance, board_definition)
 
 	camera = Camera3D.new()
 	add_child(camera)
@@ -129,11 +131,13 @@ func _ground_hit(screen_pos: Vector2, plane_y: float):
 	return plane.intersects_ray(ray_origin, ray_dir)
 
 
-func _add_board(node_name: String, size: Vector3, pos: Vector3, color: Color) -> void:
+func _add_piece(instance, definition) -> void:
 	var body := StaticBody3D.new()
-	body.name = node_name
+	body.name = instance.id
 	body.add_to_group("piece")
-	body.position = pos
+	body.position = instance.position
+
+	var size: Vector3 = Components.box_size(instance)
 
 	var collision := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
@@ -147,7 +151,7 @@ func _add_board(node_name: String, size: Vector3, pos: Vector3, color: Color) ->
 	box_mesh.size = size
 	mesh_instance.mesh = box_mesh
 	var material := StandardMaterial3D.new()
-	material.albedo_color = color
+	material.albedo_color = instance.material
 	mesh_instance.material_override = material
 	body.add_child(mesh_instance)
 
