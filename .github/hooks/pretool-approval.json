@@ -1,0 +1,20 @@
+{
+  "hook": "pretool-approval",
+  "version": 1,
+  "description": "Lightweight repository pre-tool approval hook for agent-executed terminal commands. This file is repository policy and should not be edited by agents without explicit approval.",
+  "riskyCommands": [
+    "git push --force",
+    "git push -f",
+    "git rebase",
+    "git reset",
+    "git reset --hard",
+    "git merge --no-ff",
+    "git merge --abort",
+    "git branch -D",
+    "git tag --delete",
+    "git cherry-pick"
+  ],
+  "defaultDecision": "ask",
+  "askMessage": "This command is classified as a risky git operation. Please present the exact command and a one-sentence rationale and wait for explicit approval in the current chat before executing.",
+  "notes": "This hook is advisory: the actual enforcement depends on the agent runtime (VS Code Copilot hook support). Keep it narrowly scoped to agent tool calls. Do not modify without human approval."
+}

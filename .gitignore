@@ -9,3 +9,6 @@ spikes/touch-spike-godot/builds/
 spikes/touch-spike-godot/.godot/
 .claude/worktrees/
 .vscode/
+
+# Temporary Copilot Agent Kit onboarding brief; durable plans and handoffs stay tracked.
+.copilot-agent-kit-adaptation.md
