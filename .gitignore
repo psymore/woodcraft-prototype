@@ -4,3 +4,7 @@ __pycache__/
 venv/
 *.egg-info/
 .pytest_cache/
+spikes/touch-spike-godot/smoke_test_screenshot.png
+spikes/touch-spike-godot/builds/
+.claude/worktrees/
+.vscode/
