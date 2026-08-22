@@ -51,11 +51,31 @@ function App() {
     if (selected) frame([selected.position])
   }
 
+  // OrbitControls computes its internal up-alignment quaternion once, in its
+  // constructor, from camera.up — it never recomputes it afterward. If a
+  // TOP/BOTTOM preset click left camera.up at (0,0,-1)/(0,0,1), a later
+  // orbit-drag would keep using that stale quaternion while camera.up itself
+  // stayed non-standard, drifting the horizon roughly 90 degrees for the rest
+  // of the gesture. Resetting camera.up back to (0,1,0) at the start of every
+  // new orbit-drag gesture (before OrbitControls processes it) avoids the
+  // mismatch, mirroring the Godot side's `camera_up = Vector3.UP` reset in
+  // `_on_touch_begin`.
+  const handleOrbitStart = () => {
+    const controls = controlsRef.current
+    if (!controls) return
+    ;(controls.object as THREE.PerspectiveCamera).up.set(0, 1, 0)
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', touchAction: 'none' }}>
       <Canvas camera={{ position: [0, 20, 25], fov: 50 }}>
         <Scene onDragStateChange={setIsDraggingPiece} onSelectionChange={setSelectedId} />
-        <OrbitControls ref={controlsRef} makeDefault enabled={!isDraggingPiece} />
+        <OrbitControls
+          ref={controlsRef}
+          makeDefault
+          enabled={!isDraggingPiece}
+          onStart={handleOrbitStart}
+        />
       </Canvas>
       <ViewControls
         onSelectView={handleSelectView}
