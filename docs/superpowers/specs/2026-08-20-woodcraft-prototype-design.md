@@ -1,7 +1,12 @@
 # Woodcraft Prototype — Design
 
-Status: approved for Prototype 0 (Panda3D spike). Later stages (platform
-decision, Godot/R3F rewrite) are directional, not committed.
+Status: Prototype 0 (Panda3D spike) and the platform-decision touch
+spike are both complete. The next stage — a comparative Wood CAD
+Workshop prototype built lockstep in both Godot and Three.js/R3F — is
+specified in [2026-08-22-wood-cad-workshop-design.md](2026-08-22-wood-cad-workshop-design.md),
+approved through that document's Sub-project 1 only. Everything below
+this point is historical/contextual for that document, not a live
+scope gate.
 
 ## Product concept
 
@@ -216,6 +221,7 @@ engine with touch input (device or emulator).
 
 ## Immediate scope: Prototype 0
 
-Only this stage is approved to implement right now. Everything from
-"Platform decision" onward is directional and will be re-scoped with its
-own design/plan when reached.
+This stage and the "Platform decision + comparative touch spike" stage
+are both complete. Current scope is governed by
+[2026-08-22-wood-cad-workshop-design.md](2026-08-22-wood-cad-workshop-design.md)
+instead — see that document's own "Immediate scope" section.
