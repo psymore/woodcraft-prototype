@@ -1,0 +1,23 @@
+// The one import surface the UI/scene layers use. Importing this module
+// registers every component definition (side effect of each
+// components/<id>/index.ts) before anything reads from the registry.
+import './components/board'
+import './components/roundRod'
+import './components/squareBeam'
+import './components/lBracket'
+import './components/woodScrew'
+import './components/pullupBar'
+import './components/verticalPost'
+import './components/foot'
+
+export * from './core/types'
+export * from './core/snap'
+export * from './core/framing'
+export * from './core/viewPresets'
+export * from './core/dimensions'
+export * from './core/connectionPoints'
+export * from './core/explode'
+export * from './core/spawn'
+export * from './registry/registry'
+export * from './kits'
+export * from './seedScene'
