@@ -5,7 +5,7 @@ author: "Claude Code"
 vscode-note: "Shared continuity record. Claude Code and VS Code Copilot may update this file when work changes hands."
 status: "active"
 last-agent: "Claude Code"
-updated: "2026-08-24"
+updated: "2026-08-25"
 ---
 
 # Active Work Handoff
@@ -21,8 +21,9 @@ This is the shared, repository-local continuity record for Claude Code and VS Co
 ## Current state
 
 - **Completed:** Ran an ad-hoc Stage 0–8 comparative benchmark across `spikes/touch-spike-threejs/` and `spikes/touch-spike-godot/` (viewport, inventory, manipulation, inspector, multi-view, pull-up assembly, connection-point snapping, exploded view) covering roughly Sub-projects 1–5 of the original roadmap. Scores ended too close to call; the engine decision went to Three.js on engineering cost (fast local `tsc`/`vitest` feedback vs. Godot's unreliable static type inference and export+device-install verification cycle — this session hit a real export-succeeds-but-app-crashes bug from a GDScript type-inference gap). Godot retired from git (kept on disk, gitignored). `CLAUDE.md` status section updated to record this.
-- **In progress:** Scaffolding `wood-cad-workshop/` per the approved plan (registry-based `engine/`, `store/`, `scene/`, `ui/` split) — see that plan file for the full target structure.
-- **Next action:** Finish scaffolding, port the pure logic from `spikes/touch-spike-threejs/src/` (`snap.ts`, `framing.ts`, `viewPresets.ts`, `component.ts`'s dimension/geometry math, `snapConnections.ts`) into `wood-cad-workshop/src/engine/`, rebuild the UI layer on top of a Zustand session store, then verify with `tsc -b` + `vitest run` and hand off to the user for a manual smoke test before continuing feature work.
+- **Completed:** Scaffolded `wood-cad-workshop/` (registry-based `engine/`, `store/`, `scene/`, `ui/` split), ported all pure logic and UI from `spikes/touch-spike-threejs/src/` onto the new architecture, verified `tsc -b` + `vitest run` (12/12) clean, ran `npm run dev` and had the user manually smoke-test in-browser (viewport, boards, orbit/zoom/pan, selection/move, inventory, inspector, pull-up kit, snapping, exploded view — all confirmed working). Committed on `feature/wood-cad-workshop-scaffold`, merged to `master`, pushed (`07d60bd`).
+- **Completed:** Ran a file-by-file feature-parity check (Explore agent) between `spikes/touch-spike-threejs/src/` and `wood-cad-workshop/src/`. Result: full parity, no gaps or regressions — every user-facing behavior (viewport controls incl. pinch multi-touch, drag-to-move w/ grid snap, connection-point snapping SNAP_DISTANCE=3, inventory spawn, select/rotate/duplicate/delete, inspector, view presets + frame all/selected, pull-up kit assembly, exploded view, and the grid z-fighting fix) is logically identical, just relocated into `engine/core/*`, `engine/components/*/index.ts`, and `store/sceneSessionStore.ts`. New app additionally carries extra test coverage (`connectionPoints.test.ts`, `explode.test.ts`) and a cleaner `index.css` (spike had leftover Vite-template cruft). No stubs/TODOs found.
+- **Next action:** `wood-cad-workshop/` is now the verified, sole active app going forward. Next real work is genuinely new feature development past what the spike covered (see the design spec's roadmap for what's beyond Sub-project 5) — no more porting/parity work needed. `spikes/touch-spike-threejs/` can be treated as pure historical reference from here.
 - **Blocker:** none.
 
 ## Decisions and constraints
@@ -38,12 +39,12 @@ This is the shared, repository-local continuity record for Claude Code and VS Co
 
 ## Validation
 
-- **Checks run:** `tsc -b` and `vitest run` were the standing verification loop throughout the benchmark (both spikes) — same pattern to keep using for the new app.
-- **Not yet run:** the new `wood-cad-workshop/` app hasn't been built/tested yet.
+- **Checks run:** `tsc -b` and `vitest run` (12/12) clean on `wood-cad-workshop/`. `npm run dev` launched and manually smoke-tested in-browser by the user (viewport, both boards, orbit/zoom/pan, select/move, inventory, inspector, pull-up kit, snapping, exploded view — all working). Explore-agent file-by-file parity check against `spikes/touch-spike-threejs/` found no gaps.
+- **Not yet run:** no automated e2e/browser test suite exists yet (manual smoke test only).
 
 ## Handoff notes
 
 - **From:** Claude Code
 - **To:** either agent
-- **Read first:** this file, then the approved plan file (git-housekeeping + `wood-cad-workshop/` scaffold), then `docs/superpowers/specs/2026-08-22-wood-cad-workshop-design.md`'s decision note.
-- **Do not:** resume work on `spikes/touch-spike-godot/` (retired) or treat `spikes/touch-spike-threejs/` as the app to keep extending (superseded by `wood-cad-workshop/`); re-open the "which engine" decision without new information — it's closed.
+- **Read first:** this file, then `docs/superpowers/specs/2026-08-22-wood-cad-workshop-design.md`'s decision note for roadmap context on what comes after Sub-project 5.
+- **Do not:** resume work on `spikes/touch-spike-godot/` (retired) or treat `spikes/touch-spike-threejs/` as the app to keep extending (superseded and now verified at parity by `wood-cad-workshop/`); re-open the "which engine" decision without new information — it's closed; re-port anything from the spike — parity is confirmed complete.
