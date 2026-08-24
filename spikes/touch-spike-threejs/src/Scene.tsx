@@ -1,17 +1,29 @@
 import { useState } from 'react'
-import { Board } from './Board'
-import { BOARD_DEFINITION, INITIAL_BOARD_INSTANCES } from './component'
+import type { RefObject } from 'react'
+import { DoubleSide } from 'three'
+import { Grid } from '@react-three/drei'
+import { Piece } from './Piece'
+import { getDefinition } from './component'
 import type { ComponentInstance } from './component'
 
 export function Scene({
-  onDragStateChange,
+  instances,
   onSelectionChange,
+  onDragStateChange,
+  onMove,
+  multiTouchActiveRef,
+  explodeAmount,
+  centroid,
 }: {
-  onDragStateChange: (dragging: boolean) => void
+  instances: ComponentInstance[]
   onSelectionChange: (id: string | null) => void
+  onDragStateChange: (dragging: boolean) => void
+  onMove: (id: string, position: [number, number, number]) => void
+  multiTouchActiveRef: RefObject<boolean>
+  explodeAmount: number
+  centroid: [number, number, number]
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [instances] = useState<ComponentInstance[]>(INITIAL_BOARD_INSTANCES)
 
   const select = (id: string | null) => {
     setSelectedId(id)
@@ -22,7 +34,16 @@ export function Scene({
     <>
       <ambientLight intensity={0.6} />
       <directionalLight position={[10, 20, 10]} intensity={0.8} />
-      <gridHelper args={[120, 120, '#808080', '#808080']} />
+      <Grid
+        args={[120, 120]}
+        position={[0, -0.02, 0]}
+        cellSize={1}
+        cellColor="#6b6b6b"
+        cellThickness={1.5}
+        sectionSize={0}
+        fadeDistance={200}
+        side={DoubleSide}
+      />
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         onPointerDown={() => select(null)}
@@ -31,13 +52,17 @@ export function Scene({
         <meshStandardMaterial transparent opacity={0} />
       </mesh>
       {instances.map((instance) => (
-        <Board
+        <Piece
           key={instance.id}
           instance={instance}
-          definition={BOARD_DEFINITION}
+          definition={getDefinition(instance.componentDefinitionId)}
           selected={selectedId === instance.id}
           onSelect={select}
+          onMove={onMove}
           onDragStateChange={onDragStateChange}
+          multiTouchActiveRef={multiTouchActiveRef}
+          explodeAmount={explodeAmount}
+          centroid={centroid}
         />
       ))}
     </>
