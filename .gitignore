@@ -4,9 +4,10 @@ __pycache__/
 venv/
 *.egg-info/
 .pytest_cache/
-spikes/touch-spike-godot/smoke_test_screenshot.png
-spikes/touch-spike-godot/builds/
-spikes/touch-spike-godot/.godot/
+# Godot spike retired from version control (comparative benchmark concluded
+# in favor of Three.js, see CLAUDE.md) — kept on disk for reference, not
+# tracked or deleted.
+spikes/touch-spike-godot/
 .claude/worktrees/
 .vscode/
 
