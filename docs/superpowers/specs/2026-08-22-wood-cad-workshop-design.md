@@ -5,6 +5,20 @@ Status: approved for **Sub-project 1 (Foundation)** only. Sub-projects
 and be re-confirmed against playtest results from the prior sub-project
 — when reached, per the approval-gate rule in [CLAUDE.md](../../../CLAUDE.md#before-you-start).
 
+> **Decision recorded (2026-08-24):** the "full dual-engine parity through
+> all sub-projects" plan below was superseded before reaching it in full.
+> An ad-hoc Stage 0–8 benchmark (covering roughly Sub-projects 1–5) was run
+> across both engines instead; scores came back too close to call on UX, so
+> the final call was made on engineering cost — Three.js's fast local
+> `tsc`/`vitest` feedback loop vs. Godot's unreliable static type inference
+> and full export+device-install verification cycle. Godot is retired
+> (kept on disk, untracked in git); Three.js continues as a fresh,
+> systematically-architected rebuild in `wood-cad-workshop/` (adapting
+> `world-of-cards`' registry-pattern + pure-core engine architecture — see
+> `docs/superpowers/plans/ACTIVE-WORK-vscode.md` for current state). The
+> roadmap below is kept as a historical record of the original scope, not a
+> live plan.
+
 ## Relationship to prior stages
 
 [woodcraft-prototype-design.md](2026-08-20-woodcraft-prototype-design.md)
