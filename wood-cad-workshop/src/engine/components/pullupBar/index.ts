@@ -9,7 +9,7 @@ export const PULLUP_BAR_DEFINITION: ComponentDefinition = {
   defaultDimensions: { diameter: 1.25, length: 48 },
   material: '#a6693f',
   connectionRole: 'ends',
-  structuralProperties: {},
+  structuralProperties: { bendingStrength: 98_000_000 }, // ≈98 MPa, representative hardwood dowel MOR — estimate only
   explodeDirection: null,
 }
 
