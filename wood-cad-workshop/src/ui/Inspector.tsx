@@ -29,7 +29,7 @@ export function Inspector() {
         diameterIn: instance.dimensions.diameter,
         lengthIn: instance.dimensions.length,
         userWeightKg,
-        bendingStrength: bendingStrength as number,
+        bendingStrength,
       })
     : null
 
@@ -101,7 +101,7 @@ export function Inspector() {
               value={userWeightKg}
               onChange={(e) => {
                 const value = e.target.valueAsNumber
-                if (!Number.isNaN(value)) setUserWeightKg(value)
+                if (!Number.isNaN(value)) setUserWeightKg(Math.max(1, value))
               }}
               style={{ width: 80, minHeight: 32 }}
             />
@@ -117,7 +117,7 @@ export function Inspector() {
               }}
             />
             <span>
-              Safety factor: {Number.isFinite(structuralResult.safetyFactor) ? structuralResult.safetyFactor.toFixed(2) : '∞'}
+              Safety factor: {Number.isFinite(structuralResult.safetyFactor) ? structuralResult.safetyFactor.toFixed(2) : '∞'} ({structuralResult.status})
             </span>
           </div>
           <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
