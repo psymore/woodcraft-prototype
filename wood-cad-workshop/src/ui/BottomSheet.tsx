@@ -20,6 +20,7 @@ export function BottomSheet({
   if (!open) return null
 
   const handlePointerDown = (e: ReactPointerEvent) => {
+    if (dragging.current) return
     ;(e.target as Element).setPointerCapture(e.pointerId)
     dragging.current = true
     dragStartY.current = e.clientY
@@ -49,7 +50,7 @@ export function BottomSheet({
           position: 'fixed',
           inset: 0,
           background: 'rgba(0,0,0,0.3)',
-          zIndex: 1,
+          zIndex: 2,
         }}
       />
       <div
@@ -63,7 +64,7 @@ export function BottomSheet({
           border: '1px solid #ccc',
           borderTopLeftRadius: 12,
           borderTopRightRadius: 12,
-          zIndex: 1,
+          zIndex: 2,
           transform: `translateY(${dragDeltaY}px)`,
           maxHeight: '55vh',
           display: 'flex',
@@ -84,6 +85,7 @@ export function BottomSheet({
             overflowY: 'auto',
             padding: '0 10px 10px',
             paddingBottom: 'max(10px, env(safe-area-inset-bottom))',
+            touchAction: 'pan-y',
           }}
         >
           {children}

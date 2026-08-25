@@ -23,6 +23,7 @@ export function ViewControls({
         gap: 4,
         flexWrap: 'wrap',
         zIndex: 1,
+        maxWidth: 'calc(100% - 232px)',
       }}
     >
       {VIEW_NAMES.map((view) => (

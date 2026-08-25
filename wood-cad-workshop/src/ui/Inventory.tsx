@@ -22,7 +22,7 @@ export function Inventory() {
         onClick={toggleInventory}
         style={{ position: 'absolute', bottom: 8, right: 8, minWidth: 44, minHeight: 44, zIndex: 1 }}
       >
-        {open ? 'CLOSE' : 'INVENTORY'}
+        INVENTORY
       </button>
       <BottomSheet open={open} onClose={toggleInventory}>
         {CATEGORY_ORDER.map((category) => (
