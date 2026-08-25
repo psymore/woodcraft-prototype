@@ -10,6 +10,10 @@ export type Dimensions = Record<string, number>
 // dock onto another piece's end, e.g. a foot or bracket).
 export type ConnectionRole = 'ends' | 'single' | 'none'
 
+export interface StructuralProperties {
+  bendingStrength?: number // MOR (modulus of rupture), in Pa — nominal bending strength used by the structural check
+}
+
 export interface ComponentDefinition {
   id: string
   name: string
@@ -18,7 +22,7 @@ export interface ComponentDefinition {
   defaultDimensions: Dimensions
   material: string
   connectionRole: ConnectionRole
-  structuralProperties: Record<string, never>
+  structuralProperties: StructuralProperties
   explodeDirection: null
 }
 
