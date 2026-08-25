@@ -10,6 +10,7 @@ venv/
 spikes/touch-spike-godot/
 .claude/worktrees/
 .vscode/
+.superpowers/
 
 # Temporary Copilot Agent Kit onboarding brief; durable plans and handoffs stay tracked.
 .copilot-agent-kit-adaptation.md
