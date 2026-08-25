@@ -116,8 +116,20 @@ function App() {
       />
       <Inventory />
       <PullupKitButton />
-      <PieceControls />
-      <Inspector />
+      <div
+        style={{
+          position: 'absolute',
+          top: 8,
+          right: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          zIndex: 1,
+        }}
+      >
+        <PieceControls />
+        <Inspector />
+      </div>
       <ExplodedView />
     </div>
   )

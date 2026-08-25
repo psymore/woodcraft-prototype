@@ -36,16 +36,11 @@ export function Inspector() {
   return (
     <div
       style={{
-        position: 'absolute',
-        top: 8,
-        left: 8,
-        marginTop: 140,
         width: 200,
         background: 'rgba(255,255,255,0.96)',
         border: '1px solid #ccc',
         borderRadius: 8,
         padding: 10,
-        zIndex: 1,
         fontSize: 13,
       }}
     >
@@ -62,7 +57,7 @@ export function Inspector() {
             type="number"
             value={value}
             onChange={(e) => setDimension(key, e.target.valueAsNumber)}
-            style={{ width: 80, minHeight: 32 }}
+            style={{ width: 80, minHeight: 44 }}
           />
         </label>
       ))}
@@ -103,7 +98,7 @@ export function Inspector() {
                 const value = e.target.valueAsNumber
                 if (!Number.isNaN(value)) setUserWeightKg(Math.max(1, value))
               }}
-              style={{ width: 80, minHeight: 32 }}
+              style={{ width: 80, minHeight: 44 }}
             />
           </label>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>

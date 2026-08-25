@@ -10,14 +10,7 @@ export function PieceControls() {
 
   return (
     <div
-      style={{
-        position: 'absolute',
-        top: 8,
-        right: 8,
-        display: 'flex',
-        gap: 4,
-        zIndex: 1,
-      }}
+      style={{ display: 'flex', gap: 4 }}
     >
       <button onClick={rotateSelected} style={{ minWidth: 44, minHeight: 44 }}>
         ROTATE
