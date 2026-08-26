@@ -134,17 +134,27 @@ export function Piece({
 
   // The handle is a SIBLING of the rotating group, so it stays in world space:
   // pieces can now pitch/roll, and a child at local +Y would swing off to the
-  // side while its drag logic still moves along world Y. Using the largest
-  // dimension as a half-extent is deliberately a slight over-estimate — it is
-  // always above the piece whatever the current rotation is.
-  const maxHalfExtent = Math.max(...Object.values(instance.dimensions)) / 2
+  // side while its drag logic still moves along world Y. To sit right at the
+  // piece's actual top (not a generic over-estimate), rotate each local
+  // half-extent by the piece's current orientation and take the axis-aligned
+  // bounding box's Y half-extent — the standard "abs(rotated basis) · extent"
+  // formula, using the same Euler order ('XYZ') the group itself renders with.
+  const getVerticalExtent = (halfExtents: [number, number, number]) => {
+    const [hx, hy, hz] = halfExtents
+    const euler = new THREE.Euler(instance.rotation[0], instance.rotation[1], instance.rotation[2], 'XYZ')
+    return (
+      Math.abs(new THREE.Vector3(hx, 0, 0).applyEuler(euler).y) +
+      Math.abs(new THREE.Vector3(0, hy, 0).applyEuler(euler).y) +
+      Math.abs(new THREE.Vector3(0, 0, hz).applyEuler(euler).y)
+    )
+  }
 
-  const verticalHandle = () =>
+  const verticalHandle = (halfExtents: [number, number, number]) =>
     showVerticalHandle && (
       <mesh
         position={[
           displayPosition[0],
-          displayPosition[1] + maxHalfExtent + HANDLE_GAP,
+          displayPosition[1] + getVerticalExtent(halfExtents) + HANDLE_GAP,
           displayPosition[2],
         ]}
         onPointerDown={handleVerticalPointerDown}
@@ -171,7 +181,7 @@ export function Piece({
             <meshStandardMaterial color={color} />
           </mesh>
         </group>
-        {verticalHandle()}
+        {verticalHandle([radius, radius, height / 2])}
         {showGizmo && group && (
           <TransformControls
             object={group}
@@ -201,7 +211,7 @@ export function Piece({
           <meshStandardMaterial color={color} />
         </mesh>
       </group>
-      {verticalHandle()}
+      {verticalHandle([size[0] / 2, size[1] / 2, size[2] / 2])}
       {showGizmo && group && (
         <TransformControls
           object={group}
