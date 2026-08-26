@@ -112,15 +112,15 @@ export function Piece({
   }
 
   const color = selected ? '#ffb347' : instance.material
-  const yaw = instance.rotation[1]
   const displayPosition = getExplodedPosition(instance.position, centroid, explodeAmount)
+  const groupRef = useRef<THREE.Group>(null)
 
   const showVerticalHandle = selected && explodeAmount === 0
 
   const verticalHandle = (topY: number) =>
     showVerticalHandle && (
       <mesh
-        position={[displayPosition[0], topY + HANDLE_GAP, displayPosition[2]]}
+        position={[0, topY + HANDLE_GAP, 0]}
         onPointerDown={handleVerticalPointerDown}
         onPointerMove={handleVerticalPointerMove}
         onPointerUp={handleVerticalPointerUp}
@@ -133,10 +133,9 @@ export function Piece({
   if (definition.geometry.shape === 'cylinder') {
     const { radius, height } = getCylinderSize(instance)
     return (
-      <>
+      <group ref={groupRef} position={displayPosition} rotation={instance.rotation}>
         <mesh
-          position={displayPosition}
-          rotation={[Math.PI / 2, yaw, 0]}
+          rotation={[Math.PI / 2, 0, 0]}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
@@ -144,17 +143,15 @@ export function Piece({
           <cylinderGeometry args={[radius, radius, height, 16]} />
           <meshStandardMaterial color={color} />
         </mesh>
-        {verticalHandle(displayPosition[1] + height / 2)}
-      </>
+        {verticalHandle(height / 2)}
+      </group>
     )
   }
 
   const size = getBoxSize(instance)
   return (
-    <>
+    <group ref={groupRef} position={displayPosition} rotation={instance.rotation}>
       <mesh
-        position={displayPosition}
-        rotation={[0, yaw, 0]}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -162,7 +159,7 @@ export function Piece({
         <boxGeometry args={size} />
         <meshStandardMaterial color={color} />
       </mesh>
-      {verticalHandle(displayPosition[1] + size[1] / 2)}
-    </>
+      {verticalHandle(size[1] / 2)}
+    </group>
   )
 }
