@@ -6,21 +6,7 @@ export function ExplodedView() {
   const active = amount > 0
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        bottom: 8,
-        left: 8,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        background: 'rgba(255,255,255,0.96)',
-        border: '1px solid #ccc',
-        borderRadius: 8,
-        padding: 8,
-        zIndex: 1,
-      }}
-    >
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <button onClick={() => setExplodeAmount(active ? 0 : 0.5)} style={{ minWidth: 44, minHeight: 44 }}>
         {active ? 'ASSEMBLE' : 'EXPLODE'}
       </button>

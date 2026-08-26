@@ -30,6 +30,8 @@ export function Piece({
   const movePiece = useSceneSession((s) => s.movePiece)
   const setDraggingPiece = useSceneSession((s) => s.setDraggingPiece)
   const setRotation = useSceneSession((s) => s.setRotation)
+  const showRotationGizmo = useSceneSession((s) => s.showRotationGizmo)
+  const showMoveHandle = useSceneSession((s) => s.showMoveHandle)
   const camera = useThree((s) => s.camera)
 
   // State-backed callback ref, not useRef: TransformControls needs the real
@@ -129,8 +131,8 @@ export function Piece({
   const color = selected ? '#ffb347' : instance.material
   const displayPosition = getExplodedPosition(instance.position, centroid, explodeAmount)
 
-  const showVerticalHandle = selected && explodeAmount === 0
-  const showGizmo = selected && explodeAmount === 0
+  const showVerticalHandle = selected && explodeAmount === 0 && showMoveHandle
+  const showGizmo = selected && explodeAmount === 0 && showRotationGizmo
 
   // The handle is a SIBLING of the rotating group, so it stays in world space:
   // pieces can now pitch/roll, and a child at local +Y would swing off to the
@@ -149,12 +151,34 @@ export function Piece({
     )
   }
 
+  // The rotation gizmo keeps a constant SCREEN size regardless of camera
+  // distance/zoom, so its world-space radius isn't a fixed number — it has
+  // to be computed the same way drei's bundled TransformControls computes
+  // its own handle scale (three-stdlib/controls/TransformControls.cjs,
+  // `updateMatrixWorld`: factor = distance * min(1.9*tan(fov/2)/zoom, 7),
+  // handle.scale = factor * size/7), so the handle can clear it at any zoom
+  // level instead of just a fixed margin that only works at some distances.
+  // 1.25 is the local radius of the outermost ("E") rotate ring, the
+  // largest of the four, so clearing it clears all of them.
+  const getGizmoOuterRadius = () => {
+    if (!showGizmo) return 0
+    const cam = camera as THREE.PerspectiveCamera
+    const worldPosition = new THREE.Vector3(...displayPosition)
+    const distance = worldPosition.distanceTo(cam.position)
+    const factor = distance * Math.min((1.9 * Math.tan((Math.PI * cam.fov) / 360)) / (cam.zoom || 1), 7)
+    const gizmoSize = 1
+    const outerRingLocalRadius = 1.25
+    return ((factor * gizmoSize) / 7) * outerRingLocalRadius
+  }
+
   const verticalHandle = (halfExtents: [number, number, number]) =>
     showVerticalHandle && (
       <mesh
         position={[
           displayPosition[0],
-          displayPosition[1] + getVerticalExtent(halfExtents) + HANDLE_GAP,
+          displayPosition[1] +
+            Math.max(getVerticalExtent(halfExtents), getGizmoOuterRadius()) +
+            HANDLE_GAP,
           displayPosition[2],
         ]}
         onPointerDown={handleVerticalPointerDown}

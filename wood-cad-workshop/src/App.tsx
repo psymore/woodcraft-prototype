@@ -4,12 +4,10 @@ import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import { Scene } from './scene/Scene'
-import { ViewControls } from './ui/ViewControls'
-import { Inventory } from './ui/Inventory'
-import { PieceControls } from './ui/PieceControls'
+import { MainMenu } from './ui/MainMenu'
+import { InventorySheet } from './ui/Inventory'
 import { Inspector } from './ui/Inspector'
-import { ExplodedView } from './ui/ExplodedView'
-import { PullupKitButton } from './ui/PullupKitButton'
+import { GizmoToggles } from './ui/GizmoToggles'
 import { getViewPreset, computeBounds } from './engine'
 import type { ViewName } from './engine'
 import { useSceneSession } from './store/sceneSessionStore'
@@ -109,28 +107,16 @@ function App() {
           onStart={handleOrbitStart}
         />
       </Canvas>
-      <ViewControls
+      <MainMenu
         onSelectView={handleSelectView}
         onFrameAll={handleFrameAll}
         onFrameSelected={handleFrameSelected}
       />
-      <Inventory />
-      <PullupKitButton />
-      <div
-        style={{
-          position: 'absolute',
-          top: 8,
-          right: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-          zIndex: 1,
-        }}
-      >
-        <PieceControls />
+      <InventorySheet />
+      <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
         <Inspector />
       </div>
-      <ExplodedView />
+      <GizmoToggles />
     </div>
   )
 }

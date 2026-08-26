@@ -17,6 +17,8 @@ interface SceneSessionState {
   inventoryOpen: boolean
   explodeAmount: number
   isDraggingPiece: boolean
+  showRotationGizmo: boolean
+  showMoveHandle: boolean
 
   selectPiece: (id: string | null) => void
   addComponent: (definition: ComponentDefinition) => void
@@ -31,6 +33,8 @@ interface SceneSessionState {
   toggleInventory: () => void
   setExplodeAmount: (amount: number) => void
   setDraggingPiece: (dragging: boolean) => void
+  toggleRotationGizmo: () => void
+  toggleMoveHandle: () => void
 }
 
 // One short-lived per-session store, created via a factory — mirrors
@@ -45,6 +49,8 @@ export function createSceneSessionStore() {
     inventoryOpen: false,
     explodeAmount: 0,
     isDraggingPiece: false,
+    showRotationGizmo: true,
+    showMoveHandle: true,
 
     selectPiece: (id) => set({ selectedId: id }),
 
@@ -145,6 +151,10 @@ export function createSceneSessionStore() {
     setExplodeAmount: (amount) => set({ explodeAmount: amount }),
 
     setDraggingPiece: (dragging) => set({ isDraggingPiece: dragging }),
+
+    toggleRotationGizmo: () => set((state) => ({ showRotationGizmo: !state.showRotationGizmo })),
+
+    toggleMoveHandle: () => set((state) => ({ showMoveHandle: !state.showMoveHandle })),
   }))
 }
 
