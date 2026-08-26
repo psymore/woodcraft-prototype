@@ -27,13 +27,33 @@ export function toWorldPoint(
   local: [number, number, number],
 ): [number, number, number] {
   const [lx, ly, lz] = local
-  const yaw = instance.rotation[1]
-  const cos = Math.cos(yaw)
-  const sin = Math.sin(yaw)
+  const [rx, ry, rz] = instance.rotation
+
+  // Full 3-axis rotation matrix for three.js's default Euler order 'XYZ'
+  // (matches THREE.Matrix4.makeRotationFromEuler exactly, so this stays in
+  // sync with how Piece.tsx renders `instance.rotation`). Reduces to the
+  // previous yaw-only formula when rx = rz = 0.
+  const c1 = Math.cos(rx)
+  const s1 = Math.sin(rx)
+  const c2 = Math.cos(ry)
+  const s2 = Math.sin(ry)
+  const c3 = Math.cos(rz)
+  const s3 = Math.sin(rz)
+
+  const m11 = c2 * c3
+  const m12 = -c2 * s3
+  const m13 = s2
+  const m21 = c1 * s3 + s1 * s2 * c3
+  const m22 = c1 * c3 - s1 * s2 * s3
+  const m23 = -s1 * c2
+  const m31 = s1 * s3 - c1 * s2 * c3
+  const m32 = s1 * c3 + c1 * s2 * s3
+  const m33 = c1 * c2
+
   return [
-    instance.position[0] + lx * cos + lz * sin,
-    instance.position[1] + ly,
-    instance.position[2] - lx * sin + lz * cos,
+    instance.position[0] + m11 * lx + m12 * ly + m13 * lz,
+    instance.position[1] + m21 * lx + m22 * ly + m23 * lz,
+    instance.position[2] + m31 * lx + m32 * ly + m33 * lz,
   ]
 }
 

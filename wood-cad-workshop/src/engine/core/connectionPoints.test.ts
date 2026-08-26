@@ -81,6 +81,21 @@ describe('toWorldPoint', () => {
     expect(world[1]).toBeCloseTo(0)
     expect(world[2]).toBeCloseTo(5)
   })
+
+  it('applies pitch (X-axis) rotation to a local point', () => {
+    const instance: ComponentInstance = {
+      id: 'r1',
+      componentDefinitionId: 'test_rod',
+      position: [0, 0, 0],
+      rotation: [Math.PI / 2, 0, 0],
+      dimensions: { diameter: 1, length: 10 },
+      material: '#000',
+    }
+    const world = toWorldPoint(instance, [0, 0, 5])
+    expect(world[0]).toBeCloseTo(0)
+    expect(world[1]).toBeCloseTo(-5)
+    expect(world[2]).toBeCloseTo(0)
+  })
 })
 
 describe('findConnectionSnapDelta', () => {
