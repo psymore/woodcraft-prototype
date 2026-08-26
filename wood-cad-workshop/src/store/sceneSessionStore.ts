@@ -13,6 +13,7 @@ interface SceneSessionState {
   addComponent: (definition: ComponentDefinition) => void
   addPullupKit: () => void
   movePiece: (id: string, position: [number, number, number]) => void
+  setRotation: (id: string, rotation: [number, number, number]) => void
   rotateSelected: () => void
   duplicateSelected: () => void
   deleteSelected: () => void
@@ -55,6 +56,11 @@ export function createSceneSessionStore() {
           instances: state.instances.map((i) => (i.id === id ? { ...i, position: finalPosition } : i)),
         }
       }),
+
+    setRotation: (id, rotation) =>
+      set((state) => ({
+        instances: state.instances.map((i) => (i.id === id ? { ...i, rotation } : i)),
+      })),
 
     rotateSelected: () =>
       set((state) => ({
