@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import type { RefObject } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
 import { useThree } from '@react-three/fiber'
+import { TransformControls } from '@react-three/drei'
 import * as THREE from 'three'
 import type { ComponentDefinition, ComponentInstance } from '../engine'
 import { getBoxSize, getCylinderSize, getExplodedPosition, snapValue } from '../engine'
@@ -10,6 +11,7 @@ import { useSceneSession } from '../store/sceneSessionStore'
 const GRID_INCREMENT = 1
 const GROUND_PLANE = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
 const HANDLE_GAP = 0.5
+const ROTATION_SNAP = THREE.MathUtils.degToRad(15)
 
 export function Piece({
   instance,
@@ -27,6 +29,7 @@ export function Piece({
   const selectPiece = useSceneSession((s) => s.selectPiece)
   const movePiece = useSceneSession((s) => s.movePiece)
   const setDraggingPiece = useSceneSession((s) => s.setDraggingPiece)
+  const setRotation = useSceneSession((s) => s.setRotation)
   const camera = useThree((s) => s.camera)
 
   const dragging = useRef(false)
@@ -111,11 +114,18 @@ export function Piece({
     ;(e.target as Element).releasePointerCapture(e.pointerId)
   }
 
+  const handleGizmoChange = () => {
+    const group = groupRef.current
+    if (!group) return
+    setRotation(instance.id, [group.rotation.x, group.rotation.y, group.rotation.z])
+  }
+
   const color = selected ? '#ffb347' : instance.material
   const displayPosition = getExplodedPosition(instance.position, centroid, explodeAmount)
   const groupRef = useRef<THREE.Group>(null)
 
   const showVerticalHandle = selected && explodeAmount === 0
+  const showGizmo = selected && explodeAmount === 0 && !multiTouchActiveRef.current
 
   const verticalHandle = (topY: number) =>
     showVerticalHandle && (
@@ -133,33 +143,61 @@ export function Piece({
   if (definition.geometry.shape === 'cylinder') {
     const { radius, height } = getCylinderSize(instance)
     return (
-      <group ref={groupRef} position={displayPosition} rotation={instance.rotation}>
-        <mesh
-          rotation={[Math.PI / 2, 0, 0]}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-        >
-          <cylinderGeometry args={[radius, radius, height, 16]} />
-          <meshStandardMaterial color={color} />
-        </mesh>
-        {verticalHandle(height / 2)}
-      </group>
+      <>
+        <group ref={groupRef} position={displayPosition} rotation={instance.rotation}>
+          <mesh
+            rotation={[Math.PI / 2, 0, 0]}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+          >
+            <cylinderGeometry args={[radius, radius, height, 16]} />
+            <meshStandardMaterial color={color} />
+          </mesh>
+          {verticalHandle(height / 2)}
+        </group>
+        {showGizmo && (
+          <TransformControls
+            object={groupRef.current ?? undefined}
+            mode="rotate"
+            space="world"
+            rotationSnap={ROTATION_SNAP}
+            showX
+            showY
+            showZ
+            onObjectChange={handleGizmoChange}
+          />
+        )}
+      </>
     )
   }
 
   const size = getBoxSize(instance)
   return (
-    <group ref={groupRef} position={displayPosition} rotation={instance.rotation}>
-      <mesh
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-      >
-        <boxGeometry args={size} />
-        <meshStandardMaterial color={color} />
-      </mesh>
-      {verticalHandle(size[1] / 2)}
-    </group>
+    <>
+      <group ref={groupRef} position={displayPosition} rotation={instance.rotation}>
+        <mesh
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+        >
+          <boxGeometry args={size} />
+          <meshStandardMaterial color={color} />
+        </mesh>
+        {verticalHandle(size[1] / 2)}
+      </group>
+      {showGizmo && (
+        <TransformControls
+          object={groupRef.current ?? undefined}
+          mode="rotate"
+          space="world"
+          rotationSnap={ROTATION_SNAP}
+          showX
+          showY
+          showZ
+          onObjectChange={handleGizmoChange}
+        />
+      )}
+    </>
   )
 }
