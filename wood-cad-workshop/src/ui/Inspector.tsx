@@ -14,6 +14,7 @@ export function Inspector() {
   const changeDimensions = useSceneSession((s) => s.changeDimensions)
   const movePiece = useSceneSession((s) => s.movePiece)
   const [userWeightKg, setUserWeightKg] = useState(80)
+  const [collapsed, setCollapsed] = useState(false)
 
   if (!selectedId || !instance) return null
   const definition = getComponent(instance.componentDefinitionId)
@@ -41,18 +42,51 @@ export function Inspector() {
       })
     : null
 
+  if (collapsed) {
+    return (
+      <div
+        style={{
+          width: 'min(140px, 34vw)',
+          background: 'rgba(255,255,255,0.96)',
+          border: '1px solid #ccc',
+          borderRadius: 8,
+          padding: '6px 8px',
+          fontSize: 13,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 6,
+        }}
+      >
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {definition.name}
+        </span>
+        <button onClick={() => setCollapsed(false)} style={{ minWidth: 32, minHeight: 32, flexShrink: 0 }}>
+          ⤢
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div
       style={{
-        width: 200,
+        width: 'min(200px, 46vw)',
         background: 'rgba(255,255,255,0.96)',
         border: '1px solid #ccc',
         borderRadius: 8,
         padding: 10,
         fontSize: 13,
+        maxHeight: '70vh',
+        overflowY: 'auto',
       }}
     >
-      <div style={{ fontWeight: 'bold', marginBottom: 6 }}>{definition.name}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <span style={{ fontWeight: 'bold' }}>{definition.name}</span>
+        <button onClick={() => setCollapsed(true)} style={{ minWidth: 32, minHeight: 32, flexShrink: 0 }}>
+          ▬
+        </button>
+      </div>
 
       <div style={{ fontWeight: 'bold', marginTop: 6 }}>Dimensions</div>
       {Object.entries(instance.dimensions).map(([key, value]) => (
