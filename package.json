@@ -1,0 +1,9 @@
+{
+  "name": "woodcraft-prototype",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix wood-cad-workshop run dev",
+    "build": "npm --prefix wood-cad-workshop run build",
+    "test": "npm --prefix wood-cad-workshop run test"
+  }
+}

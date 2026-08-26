@@ -26,6 +26,21 @@ where things live, not what they say.
   logic carry forward to the real engine, not the Panda3D code itself.
   Don't over-invest in polish here.
 
+## Session isolation: branches, not worktrees
+
+Claude Code groups session transcripts by working directory. A git worktree
+lives in its own directory (e.g. `.claude/worktrees/<name>/`), so any
+session run inside one is invisible from the session list opened at the
+repo base — this has already caused a lost-session problem once.
+
+**Do not use git worktrees for isolation in this repo.** When starting
+feature work that would normally call for `superpowers:using-git-worktrees`,
+instead create and check out a branch directly in the main working
+directory: `feature/<name>` or `refactor/<name>` (matching whatever the
+work actually is). Isolation comes from the branch, not the directory.
+Merge/finish it the same way you would a worktree branch — this only
+changes where the work happens, not the git workflow around it.
+
 ## Status
 
 Prototype 0, the platform-decision touch spike, and the Wood CAD Workshop
