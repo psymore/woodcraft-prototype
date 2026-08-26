@@ -1,6 +1,6 @@
 # Transform Gizmo — Rotation (Sub-project: 3D Editor Next Steps, Step 1)
 
-Status: approved, implementation pending.
+Status: implemented.
 
 ## Context
 
@@ -73,26 +73,65 @@ offset; outer group's rotation is exactly what the mesh's rotation prop
 was already set to, since `x`/`z` were always 0) — no visual change for
 existing box pieces.
 
-The vertical-move handle (from the prior step) and the body drag
-handlers are unaffected: they operate in world space via `e.ray` and
-`movePiece`, independent of this local nesting.
+The body drag handlers are unaffected: they operate in world space via
+`e.ray` and `movePiece`, independent of this local nesting.
+
+The vertical-move handle was *not* unaffected, contrary to this document's
+original claim. It was rendered as a child of the piece's group at local
+`[0, topY + gap, 0]`, which pointed at world up only while pitch and roll
+were zero. Once pieces can pitch (Stand Up, or the gizmo's X/Z rings) the
+handle swung off to the side of the piece while its drag logic still moved
+along world Y. It is now rendered as a *sibling* of the group, positioned in
+world space at `displayPosition + (maxHalfExtent + gap)` on Y, where
+`maxHalfExtent` is half the piece's largest dimension — a deliberate slight
+over-estimate that is always above the piece regardless of orientation.
 
 ## Gizmo wiring
 
-- Each `Piece` conditionally renders `<TransformControls object={groupRef}
-  mode="rotate" rotationSnap={THREE.MathUtils.degToRad(15)} showX showY
-  showZ onObjectChange={...} />` when `selected && explodeAmount === 0 &&
-  !multiTouchActiveRef.current` — matching the existing guard pattern used
-  for the vertical handle.
+- Each `Piece` conditionally renders `<TransformControls object={group}
+  mode="rotate" space="world" rotationSnap={THREE.MathUtils.degToRad(15)}
+  showX showY showZ onObjectChange={...} />` when `selected &&
+  explodeAmount === 0` — matching the guard used for the vertical handle.
+  `space="world"` keeps the rings aligned to the world axes so the drag
+  direction stays predictable after a piece has been pitched.
+- `object` is a state-backed callback ref (`useState<THREE.Group | null>`
+  + `ref={setGroup}`), not a `useRef`: a `useRef` is `null` on the first
+  render and never re-renders, so a piece mounting already-selected (e.g.
+  right after DUPLICATE) would attach the gizmo to drei's own empty
+  wrapper at the origin.
 - `rotationSnap` is drei's native prop — no custom snapping math needed,
   unlike position dragging's hand-rolled `snapValue`.
 - `onObjectChange` reads the group's live `rotation.{x,y,z}` and calls a
   new store action `setRotation(id, [x, y, z])`, mirroring `movePiece`'s
   shape but without connection-snap logic (out of scope for this step;
   connection/orientation snapping is step 4's concern).
-- The existing "Rotate" button (`rotateSelected`, +90° Y bump) is
-  unchanged and continues to work alongside the gizmo — both act on the
-  same `rotation` field.
+- The existing "Rotate" button (`rotateSelected`) continues to work
+  alongside the gizmo — both act on the same `rotation` field. Its
+  implementation did change: a raw `rotation[1] += 90°` is a world-Y spin
+  only while pitch and roll are zero, so it now composes a world-Y
+  quaternion turn onto the current orientation and converts back to Euler.
+
+## Stand Up (added during implementation)
+
+"Stand Up" was brainstormed and approved inline in chat during this
+branch's implementation; it was not part of the original plan for step 1.
+It was originally scoped as step 3 of the broader 5-step initiative
+(vertical/stand-up action), but was pulled forward into step 1's branch at
+the user's request, since the 3-axis rotation model it depends on landed
+here.
+
+- Canonical absolute pose: `rotation = [Math.PI / 2, 0, 0]` with
+  `position.y = dimensions.length / 2`, so the piece stands on the ground
+  plane on one end. Absolute, not relative — the result is the same
+  regardless of the piece's prior orientation, which keeps it predictable
+  after a free gizmo rotation.
+- Gated to pieces whose definition has `connectionRole === 'ends'` —
+  board, squareBeam, roundRod, verticalPost, pullupBar. Anything else
+  (small hardware, `'single'`/`'none'`) is a no-op, since "vertical" has no
+  clear meaning there.
+- The store action writes `position` directly rather than going through
+  `movePiece`, deliberately: connection-point snapping would nudge the
+  absolute pose toward nearby pieces.
 
 ## Testing
 

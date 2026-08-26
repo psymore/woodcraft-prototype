@@ -1,4 +1,7 @@
 import { create } from 'zustand'
+// Note: this store is app state, not `engine/core` — the "no three import"
+// purity constraint applies only to `engine/core/*`.
+import * as THREE from 'three'
 import type { ComponentDefinition, ComponentInstance, Dimensions } from '../engine'
 import {
   createInstance,
@@ -69,13 +72,24 @@ export function createSceneSessionStore() {
         instances: state.instances.map((i) => (i.id === id ? { ...i, rotation } : i)),
       })),
 
+    // Composes a 90° turn about the WORLD Y axis onto the current orientation.
+    // Adding to the Euler Y term only spins about world Y while pitch/roll are
+    // zero; now that they can be non-zero (Stand Up, gizmo X/Z rings) it has to
+    // go through a quaternion or a stood-up post topples instead of spinning.
     rotateSelected: () =>
       set((state) => ({
-        instances: state.instances.map((i) =>
-          i.id === state.selectedId
-            ? { ...i, rotation: [i.rotation[0], i.rotation[1] + Math.PI / 2, i.rotation[2]] }
-            : i,
-        ),
+        instances: state.instances.map((i) => {
+          if (i.id !== state.selectedId) return i
+          const currentEuler = new THREE.Euler(i.rotation[0], i.rotation[1], i.rotation[2], 'XYZ')
+          const q = new THREE.Quaternion().setFromEuler(currentEuler)
+          const yTurn = new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(0, 1, 0),
+            Math.PI / 2,
+          )
+          q.premultiply(yTurn)
+          const nextEuler = new THREE.Euler().setFromQuaternion(q, 'XYZ')
+          return { ...i, rotation: [nextEuler.x, nextEuler.y, nextEuler.z] }
+        }),
       })),
 
     // Absolute canonical standing pose — always the same result regardless
@@ -90,10 +104,14 @@ export function createSceneSessionStore() {
         if (!selected) return state
         if (getComponent(selected.componentDefinitionId).connectionRole !== 'ends') return state
         const halfLength = selected.dimensions.length / 2
+        if (!Number.isFinite(halfLength)) return state
         return {
           instances: state.instances.map((i) =>
             i.id === selected.id
-              ? { ...i, rotation: [Math.PI / 2, 0, 0], position: [i.position[0], halfLength, i.position[2]] }
+              ? // position is written directly rather than through movePiece: this
+                // is an absolute pose, so it must not be nudged by connection-point
+                // snapping against nearby pieces.
+                { ...i, rotation: [Math.PI / 2, 0, 0], position: [i.position[0], halfLength, i.position[2]] }
               : i,
           ),
         }

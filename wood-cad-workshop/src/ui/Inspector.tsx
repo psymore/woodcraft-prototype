@@ -87,7 +87,11 @@ export function Inspector() {
       ))}
 
       <div style={{ fontWeight: 'bold', marginTop: 8 }}>Rotation</div>
-      <div>yaw: {((instance.rotation[1] * 180) / Math.PI).toFixed(0)}°</div>
+      <div>
+        x: {((instance.rotation[0] * 180) / Math.PI).toFixed(0)}°, y:{' '}
+        {((instance.rotation[1] * 180) / Math.PI).toFixed(0)}°, z:{' '}
+        {((instance.rotation[2] * 180) / Math.PI).toFixed(0)}°
+      </div>
 
       <div style={{ fontWeight: 'bold', marginTop: 8 }}>Material</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

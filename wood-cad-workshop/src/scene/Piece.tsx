@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
 import { useThree } from '@react-three/fiber'
@@ -31,6 +31,13 @@ export function Piece({
   const setDraggingPiece = useSceneSession((s) => s.setDraggingPiece)
   const setRotation = useSceneSession((s) => s.setRotation)
   const camera = useThree((s) => s.camera)
+
+  // State-backed callback ref, not useRef: TransformControls needs the real
+  // group object at render time. A useRef is null on the first render and
+  // mutating it never re-renders, so a piece that mounts already-selected
+  // (e.g. right after DUPLICATE) would leave the gizmo attached to drei's
+  // own empty wrapper at the origin.
+  const [group, setGroup] = useState<THREE.Group | null>(null)
 
   const dragging = useRef(false)
   const dragOffset = useRef<[number, number]>([0, 0])
@@ -115,22 +122,31 @@ export function Piece({
   }
 
   const handleGizmoChange = () => {
-    const group = groupRef.current
     if (!group) return
     setRotation(instance.id, [group.rotation.x, group.rotation.y, group.rotation.z])
   }
 
   const color = selected ? '#ffb347' : instance.material
   const displayPosition = getExplodedPosition(instance.position, centroid, explodeAmount)
-  const groupRef = useRef<THREE.Group>(null)
 
   const showVerticalHandle = selected && explodeAmount === 0
-  const showGizmo = selected && explodeAmount === 0 && !multiTouchActiveRef.current
+  const showGizmo = selected && explodeAmount === 0
 
-  const verticalHandle = (topY: number) =>
+  // The handle is a SIBLING of the rotating group, so it stays in world space:
+  // pieces can now pitch/roll, and a child at local +Y would swing off to the
+  // side while its drag logic still moves along world Y. Using the largest
+  // dimension as a half-extent is deliberately a slight over-estimate — it is
+  // always above the piece whatever the current rotation is.
+  const maxHalfExtent = Math.max(...Object.values(instance.dimensions)) / 2
+
+  const verticalHandle = () =>
     showVerticalHandle && (
       <mesh
-        position={[0, topY + HANDLE_GAP, 0]}
+        position={[
+          displayPosition[0],
+          displayPosition[1] + maxHalfExtent + HANDLE_GAP,
+          displayPosition[2],
+        ]}
         onPointerDown={handleVerticalPointerDown}
         onPointerMove={handleVerticalPointerMove}
         onPointerUp={handleVerticalPointerUp}
@@ -144,7 +160,7 @@ export function Piece({
     const { radius, height } = getCylinderSize(instance)
     return (
       <>
-        <group ref={groupRef} position={displayPosition} rotation={instance.rotation}>
+        <group ref={setGroup} position={displayPosition} rotation={instance.rotation}>
           <mesh
             rotation={[Math.PI / 2, 0, 0]}
             onPointerDown={handlePointerDown}
@@ -154,11 +170,11 @@ export function Piece({
             <cylinderGeometry args={[radius, radius, height, 16]} />
             <meshStandardMaterial color={color} />
           </mesh>
-          {verticalHandle(height / 2)}
         </group>
-        {showGizmo && (
+        {verticalHandle()}
+        {showGizmo && group && (
           <TransformControls
-            object={groupRef.current ?? undefined}
+            object={group}
             mode="rotate"
             space="world"
             rotationSnap={ROTATION_SNAP}
@@ -175,7 +191,7 @@ export function Piece({
   const size = getBoxSize(instance)
   return (
     <>
-      <group ref={groupRef} position={displayPosition} rotation={instance.rotation}>
+      <group ref={setGroup} position={displayPosition} rotation={instance.rotation}>
         <mesh
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
@@ -184,11 +200,11 @@ export function Piece({
           <boxGeometry args={size} />
           <meshStandardMaterial color={color} />
         </mesh>
-        {verticalHandle(size[1] / 2)}
       </group>
-      {showGizmo && (
+      {verticalHandle()}
+      {showGizmo && group && (
         <TransformControls
-          object={groupRef.current ?? undefined}
+          object={group}
           mode="rotate"
           space="world"
           rotationSnap={ROTATION_SNAP}
