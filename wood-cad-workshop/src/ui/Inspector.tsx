@@ -12,6 +12,7 @@ export function Inspector() {
   const selectedId = useSceneSession((s) => s.selectedId)
   const instance = useSceneSession((s) => s.instances.find((i) => i.id === s.selectedId) ?? null)
   const changeDimensions = useSceneSession((s) => s.changeDimensions)
+  const movePiece = useSceneSession((s) => s.movePiece)
   const [userWeightKg, setUserWeightKg] = useState(80)
 
   if (!selectedId || !instance) return null
@@ -20,6 +21,13 @@ export function Inspector() {
   const setDimension = (key: string, value: number) => {
     if (Number.isNaN(value)) return
     changeDimensions(instance.id, { ...instance.dimensions, [key]: value })
+  }
+
+  const setPositionAxis = (axis: 0 | 1 | 2, value: number) => {
+    if (Number.isNaN(value)) return
+    const next: [number, number, number] = [...instance.position]
+    next[axis] = value
+    movePiece(instance.id, next)
   }
 
   const bendingStrength = definition.structuralProperties.bendingStrength
@@ -63,10 +71,20 @@ export function Inspector() {
       ))}
 
       <div style={{ fontWeight: 'bold', marginTop: 8 }}>Position</div>
-      <div>
-        x: {instance.position[0].toFixed(2)}, y: {instance.position[1].toFixed(2)}, z:{' '}
-        {instance.position[2].toFixed(2)}
-      </div>
+      {(['x', 'y', 'z'] as const).map((label, axis) => (
+        <label
+          key={label}
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}
+        >
+          <span>{label}</span>
+          <input
+            type="number"
+            value={instance.position[axis]}
+            onChange={(e) => setPositionAxis(axis as 0 | 1 | 2, e.target.valueAsNumber)}
+            style={{ width: 80, minHeight: 44 }}
+          />
+        </label>
+      ))}
 
       <div style={{ fontWeight: 'bold', marginTop: 8 }}>Rotation</div>
       <div>yaw: {((instance.rotation[1] * 180) / Math.PI).toFixed(0)}°</div>
