@@ -151,7 +151,7 @@ export function Piece({
         onPointerMove={handleVerticalPointerMove}
         onPointerUp={handleVerticalPointerUp}
       >
-        <coneGeometry args={[0.15, 0.3, 12]} />
+        <coneGeometry args={[0.6, 1.2, 12]} />
         <meshStandardMaterial color="#4a90d9" />
       </mesh>
     )
