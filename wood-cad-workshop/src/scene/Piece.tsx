@@ -12,26 +12,6 @@ const GRID_INCREMENT = 1
 const GROUND_PLANE = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
 const HANDLE_GAP = 0.5
 const ROTATION_SNAP = THREE.MathUtils.degToRad(15)
-const GIZMO_SIZE = 1.5
-const GIZMO_YELLOW = 0xffff00
-const GIZMO_ACCENT_COLOR = new THREE.Color('#EA5C00')
-
-// three-stdlib's TransformControls has no public API for recoloring (no
-// setColors/materialLib — that's a newer three.js-native rewrite this
-// bundled version predates). Its screen-space "E" rotation ring and a few
-// small tick-mark handles are hardcoded yellow; this is the only way to
-// reach them — walk the mounted object graph and repaint anything that's
-// still exactly that yellow. Materials are constructed fresh per
-// TransformControls instance, so this never leaks across pieces.
-const recolorGizmo = (controls: THREE.Object3D | null) => {
-  if (!controls) return
-  controls.traverse((child) => {
-    const material = (child as THREE.Mesh).material
-    if (!material || Array.isArray(material)) return
-    const colorMaterial = material as THREE.Material & { color?: THREE.Color }
-    if (colorMaterial.color?.getHex() === GIZMO_YELLOW) colorMaterial.color.copy(GIZMO_ACCENT_COLOR)
-  })
-}
 
 export function Piece({
   instance,
@@ -194,11 +174,9 @@ export function Piece({
         {verticalHandle()}
         {showGizmo && group && (
           <TransformControls
-            ref={recolorGizmo}
             object={group}
             mode="rotate"
             space="world"
-            size={GIZMO_SIZE}
             rotationSnap={ROTATION_SNAP}
             showX
             showY
