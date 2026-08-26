@@ -1,6 +1,12 @@
 import { create } from 'zustand'
 import type { ComponentDefinition, ComponentInstance, Dimensions } from '../engine'
-import { createInstance, createPullupKitInstances, createSeedInstances, findConnectionSnapDelta } from '../engine'
+import {
+  createInstance,
+  createPullupKitInstances,
+  createSeedInstances,
+  findConnectionSnapDelta,
+  getComponent,
+} from '../engine'
 
 interface SceneSessionState {
   instances: ComponentInstance[]
@@ -15,6 +21,7 @@ interface SceneSessionState {
   movePiece: (id: string, position: [number, number, number]) => void
   setRotation: (id: string, rotation: [number, number, number]) => void
   rotateSelected: () => void
+  standSelectedUp: () => void
   duplicateSelected: () => void
   deleteSelected: () => void
   changeDimensions: (id: string, dimensions: Dimensions) => void
@@ -70,6 +77,27 @@ export function createSceneSessionStore() {
             : i,
         ),
       })),
+
+    // Absolute canonical standing pose — always the same result regardless
+    // of the piece's prior rotation, so it's predictable even after a free
+    // gizmo rotation. Only meaningful for "ends"-role pieces (board, beam,
+    // rod, post — anything with a long axis to stand on); a no-op for
+    // small hardware ("single"/"none" role) where "vertical" has no clear
+    // meaning.
+    standSelectedUp: () =>
+      set((state) => {
+        const selected = state.instances.find((i) => i.id === state.selectedId)
+        if (!selected) return state
+        if (getComponent(selected.componentDefinitionId).connectionRole !== 'ends') return state
+        const halfLength = selected.dimensions.length / 2
+        return {
+          instances: state.instances.map((i) =>
+            i.id === selected.id
+              ? { ...i, rotation: [Math.PI / 2, 0, 0], position: [i.position[0], halfLength, i.position[2]] }
+              : i,
+          ),
+        }
+      }),
 
     duplicateSelected: () => {
       const state = get()
