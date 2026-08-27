@@ -205,4 +205,27 @@ describe('findClosestConnectionMatch', () => {
     ])
     expect(match).toBeNull()
   })
+
+  it('excludes the moving piece\'s own point when already claimed', () => {
+    const rod: ComponentInstance = {
+      id: 'r1',
+      componentDefinitionId: 'test_rod',
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+      dimensions: { diameter: 1, length: 10 },
+      material: '#000',
+    }
+    const foot: ComponentInstance = {
+      id: 'f1',
+      componentDefinitionId: 'test_foot',
+      position: [0, 0, 6],
+      rotation: [0, 0, 0],
+      dimensions: { thickness: 1, width: 1, length: 1 },
+      material: '#000',
+    }
+    const match = findClosestConnectionMatch(rod, [0, 0, 0.5], [foot], [
+      { pieceId: 'r1', pointIndex: 1 },
+    ])
+    expect(match).toBeNull()
+  })
 })

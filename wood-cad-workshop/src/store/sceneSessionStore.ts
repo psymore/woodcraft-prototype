@@ -9,7 +9,7 @@ import {
   createSeedInstances,
   findClosestConnectionMatch,
   getComponent,
-  isConnectionCoincident,
+  pruneStaleConnections,
   SNAP_DISTANCE,
 } from '../engine'
 
@@ -69,16 +69,8 @@ export function createSceneSessionStore() {
         const moving = state.instances.find((i) => i.id === id)
         if (!moving) return state
 
-        // Staleness is checked against the raw drag position, not the
-        // post-snap one: the snap correction below is always smaller than
-        // SNAP_DISTANCE, so it can never flip a connection between stale
-        // and coincident on its own — this sidesteps needing the final
-        // position before it's known.
         const instancesAtProposed = state.instances.map((i) => (i.id === id ? { ...i, position } : i))
-        const survivingConnections = state.connections.filter((c) => {
-          if (c.pieceAId !== id && c.pieceBId !== id) return true
-          return isConnectionCoincident(c, instancesAtProposed, SNAP_DISTANCE)
-        })
+        const survivingConnections = pruneStaleConnections(instancesAtProposed, state.connections, SNAP_DISTANCE)
 
         // Points already claimed by a surviving connection can't be
         // claimed by a new one — this also means a point that just broke
@@ -92,51 +84,46 @@ export function createSceneSessionStore() {
           ? [position[0] + match.delta[0], position[1] + match.delta[1], position[2] + match.delta[2]]
           : position
 
-        let nextConnections = survivingConnections
+        const instancesAtFinal = state.instances.map((i) => (i.id === id ? { ...i, position: finalPosition } : i))
+        // Re-prune against the FINAL (post-snap) position: the snap
+        // correction above can be up to SNAP_DISTANCE and can move a
+        // different anchor point on this same piece out of range of an
+        // unrelated surviving connection, so the first prune (against the
+        // pre-snap position) isn't sufficient on its own.
+        let nextConnections = pruneStaleConnections(instancesAtFinal, survivingConnections, SNAP_DISTANCE)
+
         if (match) {
-          const alreadyConnected = survivingConnections.some(
-            (c) =>
-              (c.pieceAId === id &&
-                c.pieceBId === match.otherId &&
-                c.pointAIndex === match.movingPointIndex &&
-                c.pointBIndex === match.otherPointIndex) ||
-              (c.pieceBId === id &&
-                c.pieceAId === match.otherId &&
-                c.pointBIndex === match.movingPointIndex &&
-                c.pointAIndex === match.otherPointIndex),
-          )
-          if (!alreadyConnected) {
-            nextConnections = [
-              ...survivingConnections,
-              {
-                id: `conn-${id}-${match.otherId}-${Date.now()}`,
-                pieceAId: id,
-                pieceBId: match.otherId,
-                pointAIndex: match.movingPointIndex,
-                pointBIndex: match.otherPointIndex,
-              },
-            ]
-          }
+          nextConnections = [
+            ...nextConnections,
+            {
+              id: `conn-${id}-${match.otherId}-${match.movingPointIndex}-${match.otherPointIndex}`,
+              pieceAId: id,
+              pieceBId: match.otherId,
+              pointAIndex: match.movingPointIndex,
+              pointBIndex: match.otherPointIndex,
+            },
+          ]
         }
 
         return {
-          instances: state.instances.map((i) => (i.id === id ? { ...i, position: finalPosition } : i)),
+          instances: instancesAtFinal,
           connections: nextConnections,
         }
       }),
 
     setRotation: (id, rotation) =>
-      set((state) => ({
-        instances: state.instances.map((i) => (i.id === id ? { ...i, rotation } : i)),
-      })),
+      set((state) => {
+        const instances = state.instances.map((i) => (i.id === id ? { ...i, rotation } : i))
+        return { instances, connections: pruneStaleConnections(instances, state.connections, SNAP_DISTANCE) }
+      }),
 
     // Composes a 90° turn about the WORLD Y axis onto the current orientation.
     // Adding to the Euler Y term only spins about world Y while pitch/roll are
     // zero; now that they can be non-zero (Stand Up, gizmo X/Z rings) it has to
     // go through a quaternion or a stood-up post topples instead of spinning.
     rotateSelected: () =>
-      set((state) => ({
-        instances: state.instances.map((i) => {
+      set((state) => {
+        const instances: ComponentInstance[] = state.instances.map((i) => {
           if (i.id !== state.selectedId) return i
           const currentEuler = new THREE.Euler(i.rotation[0], i.rotation[1], i.rotation[2], 'XYZ')
           const q = new THREE.Quaternion().setFromEuler(currentEuler)
@@ -147,8 +134,9 @@ export function createSceneSessionStore() {
           q.premultiply(yTurn)
           const nextEuler = new THREE.Euler().setFromQuaternion(q, 'XYZ')
           return { ...i, rotation: [nextEuler.x, nextEuler.y, nextEuler.z] }
-        }),
-      })),
+        })
+        return { instances, connections: pruneStaleConnections(instances, state.connections, SNAP_DISTANCE) }
+      }),
 
     // Absolute canonical standing pose — always the same result regardless
     // of the piece's prior rotation, so it's predictable even after a free
@@ -163,16 +151,15 @@ export function createSceneSessionStore() {
         if (getComponent(selected.componentDefinitionId).connectionRole !== 'ends') return state
         const halfLength = selected.dimensions.length / 2
         if (!Number.isFinite(halfLength)) return state
-        return {
-          instances: state.instances.map((i) =>
-            i.id === selected.id
-              ? // position is written directly rather than through movePiece: this
-                // is an absolute pose, so it must not be nudged by connection-point
-                // snapping against nearby pieces.
-                { ...i, rotation: [Math.PI / 2, 0, 0], position: [i.position[0], halfLength, i.position[2]] }
-              : i,
-          ),
-        }
+        const instances: ComponentInstance[] = state.instances.map((i) =>
+          i.id === selected.id
+            ? // position is written directly rather than through movePiece: this
+              // is an absolute pose, so it must not be nudged by connection-point
+              // snapping against nearby pieces.
+              { ...i, rotation: [Math.PI / 2, 0, 0], position: [i.position[0], halfLength, i.position[2]] }
+            : i,
+        )
+        return { instances, connections: pruneStaleConnections(instances, state.connections, SNAP_DISTANCE) }
       }),
 
     duplicateSelected: () => {
@@ -197,9 +184,10 @@ export function createSceneSessionStore() {
       })),
 
     changeDimensions: (id, dimensions) =>
-      set((state) => ({
-        instances: state.instances.map((i) => (i.id === id ? { ...i, dimensions } : i)),
-      })),
+      set((state) => {
+        const instances = state.instances.map((i) => (i.id === id ? { ...i, dimensions } : i))
+        return { instances, connections: pruneStaleConnections(instances, state.connections, SNAP_DISTANCE) }
+      }),
 
     toggleInventory: () => set((state) => ({ inventoryOpen: !state.inventoryOpen })),
 
