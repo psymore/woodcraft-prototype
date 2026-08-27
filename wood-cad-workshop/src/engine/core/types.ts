@@ -34,3 +34,11 @@ export interface ComponentInstance {
   dimensions: Dimensions
   material: string
 }
+
+export interface Connection {
+  id: string
+  pieceAId: string
+  pieceBId: string
+  pointAIndex: number // index into getConnectionPoints(pieceA)
+  pointBIndex: number // index into getConnectionPoints(pieceB)
+}

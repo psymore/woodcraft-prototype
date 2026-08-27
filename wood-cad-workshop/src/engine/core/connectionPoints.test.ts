@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { registerComponent, clearRegistry } from '../registry/registry'
-import { findConnectionSnapDelta, getConnectionPoints, toWorldPoint } from './connectionPoints'
+import { findClosestConnectionMatch, findConnectionSnapDelta, getConnectionPoints, toWorldPoint } from './connectionPoints'
 import type { ComponentDefinition, ComponentInstance } from './types'
 
 function rodDefinition(): ComponentDefinition {
@@ -155,5 +155,54 @@ describe('findConnectionSnapDelta', () => {
       material: '#000',
     }
     expect(findConnectionSnapDelta(rod, [0, 0, 0], [foot])).toBeNull()
+  })
+})
+
+describe('findClosestConnectionMatch', () => {
+  it('reports which points matched, in addition to the delta', () => {
+    const rod: ComponentInstance = {
+      id: 'r1',
+      componentDefinitionId: 'test_rod',
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+      dimensions: { diameter: 1, length: 10 },
+      material: '#000',
+    }
+    const foot: ComponentInstance = {
+      id: 'f1',
+      componentDefinitionId: 'test_foot',
+      position: [0, 0, 6],
+      rotation: [0, 0, 0],
+      dimensions: { thickness: 1, width: 1, length: 1 },
+      material: '#000',
+    }
+    const match = findClosestConnectionMatch(rod, [0, 0, 0.5], [foot])
+    expect(match).not.toBeNull()
+    expect(match!.otherId).toBe('f1')
+    expect(match!.movingPointIndex).toBe(1) // rod's far end, local z=+5
+    expect(match!.otherPointIndex).toBe(0) // foot's only point
+  })
+
+  it('excludes points already claimed by an existing connection', () => {
+    const rod: ComponentInstance = {
+      id: 'r1',
+      componentDefinitionId: 'test_rod',
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+      dimensions: { diameter: 1, length: 10 },
+      material: '#000',
+    }
+    const foot: ComponentInstance = {
+      id: 'f1',
+      componentDefinitionId: 'test_foot',
+      position: [0, 0, 6],
+      rotation: [0, 0, 0],
+      dimensions: { thickness: 1, width: 1, length: 1 },
+      material: '#000',
+    }
+    const match = findClosestConnectionMatch(rod, [0, 0, 0.5], [foot], [
+      { pieceId: 'f1', pointIndex: 0 },
+    ])
+    expect(match).toBeNull()
   })
 })

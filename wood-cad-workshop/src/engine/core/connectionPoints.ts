@@ -1,7 +1,7 @@
 import type { ComponentInstance } from './types'
 import { getComponent } from '../registry/registry'
 
-const SNAP_DISTANCE = 3
+export const SNAP_DISTANCE = 3
 
 // Local-space attach points for this piece's shape, before its position/
 // rotation are applied. See ConnectionRole (core/types.ts) for what each
@@ -57,40 +57,70 @@ export function toWorldPoint(
   ]
 }
 
+export interface ConnectionMatch {
+  otherId: string
+  movingPointIndex: number
+  otherPointIndex: number
+  delta: [number, number, number]
+}
+
 // Given a piece mid-drag at `proposedPosition`, checks whether any of its
-// connection points land close to another piece's connection point. If so,
-// returns the (dx,dy,dz) nudge that makes the closest pair coincide exactly
-// — basic proximity snapping.
-export function findConnectionSnapDelta(
+// connection points land close to another piece's connection point, and
+// reports exactly which points matched (not just the resulting delta) so a
+// caller can turn a match into a persisted Connection (see
+// engine/core/connections.ts). `excludePoints` skips points already
+// claimed by an existing connection — one physical end can only be joined
+// to one other piece at a time.
+export function findClosestConnectionMatch(
   movingInstance: ComponentInstance,
   proposedPosition: [number, number, number],
   allInstances: ComponentInstance[],
-): [number, number, number] | null {
+  excludePoints: { pieceId: string; pointIndex: number }[] = [],
+): ConnectionMatch | null {
+  const isExcluded = (pieceId: string, pointIndex: number) =>
+    excludePoints.some((p) => p.pieceId === pieceId && p.pointIndex === pointIndex)
+
   const proposedInstance: ComponentInstance = { ...movingInstance, position: proposedPosition }
   const movingPointsLocal = getConnectionPoints(proposedInstance)
   if (movingPointsLocal.length === 0) return null
 
-  let best: { distance: number; delta: [number, number, number] } | null = null
+  let best: (ConnectionMatch & { distance: number }) | null = null
 
   for (const other of allInstances) {
     if (other.id === movingInstance.id) continue
     const otherPointsLocal = getConnectionPoints(other)
     if (otherPointsLocal.length === 0) continue
 
-    for (const localA of movingPointsLocal) {
+    for (let movingPointIndex = 0; movingPointIndex < movingPointsLocal.length; movingPointIndex++) {
+      if (isExcluded(movingInstance.id, movingPointIndex)) continue
+      const localA = movingPointsLocal[movingPointIndex]
       const worldA = toWorldPoint(proposedInstance, localA)
-      for (const localB of otherPointsLocal) {
+      for (let otherPointIndex = 0; otherPointIndex < otherPointsLocal.length; otherPointIndex++) {
+        if (isExcluded(other.id, otherPointIndex)) continue
+        const localB = otherPointsLocal[otherPointIndex]
         const worldB = toWorldPoint(other, localB)
         const dx = worldB[0] - worldA[0]
         const dy = worldB[1] - worldA[1]
         const dz = worldB[2] - worldA[2]
         const distance = Math.sqrt(dx * dx + dy * dy + dz * dz)
         if (distance < SNAP_DISTANCE && (!best || distance < best.distance)) {
-          best = { distance, delta: [dx, dy, dz] }
+          best = { distance, otherId: other.id, movingPointIndex, otherPointIndex, delta: [dx, dy, dz] }
         }
       }
     }
   }
 
-  return best ? best.delta : null
+  if (!best) return null
+  return { otherId: best.otherId, movingPointIndex: best.movingPointIndex, otherPointIndex: best.otherPointIndex, delta: best.delta }
+}
+
+// Given a piece mid-drag at `proposedPosition`, returns the (dx,dy,dz)
+// nudge that makes its closest connection point pair coincide exactly, or
+// null if nothing is within snap distance — basic proximity snapping.
+export function findConnectionSnapDelta(
+  movingInstance: ComponentInstance,
+  proposedPosition: [number, number, number],
+  allInstances: ComponentInstance[],
+): [number, number, number] | null {
+  return findClosestConnectionMatch(movingInstance, proposedPosition, allInstances)?.delta ?? null
 }
