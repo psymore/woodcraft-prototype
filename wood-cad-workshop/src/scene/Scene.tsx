@@ -2,6 +2,7 @@ import type { RefObject } from 'react'
 import { DoubleSide } from 'three'
 import { Grid } from '@react-three/drei'
 import { Piece } from './Piece'
+import { ConnectionMarkers } from './ConnectionMarkers'
 import { getComponent, computeCentroid } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
 
@@ -37,6 +38,7 @@ export function Scene({ multiTouchActiveRef }: { multiTouchActiveRef: RefObject<
           multiTouchActiveRef={multiTouchActiveRef}
         />
       ))}
+      <ConnectionMarkers />
     </>
   )
 }
