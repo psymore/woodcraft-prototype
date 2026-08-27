@@ -2,13 +2,15 @@ import { create } from 'zustand'
 // Note: this store is app state, not `engine/core` — the "no three import"
 // purity constraint applies only to `engine/core/*`.
 import * as THREE from 'three'
-import type { ComponentDefinition, ComponentInstance, Dimensions } from '../engine'
+import type { ComponentDefinition, ComponentInstance, Connection, Dimensions } from '../engine'
 import {
   createInstance,
   createPullupKitInstances,
   createSeedInstances,
-  findConnectionSnapDelta,
+  findClosestConnectionMatch,
   getComponent,
+  isConnectionCoincident,
+  SNAP_DISTANCE,
 } from '../engine'
 
 interface SceneSessionState {
@@ -17,6 +19,7 @@ interface SceneSessionState {
   inventoryOpen: boolean
   explodeAmount: number
   isDraggingPiece: boolean
+  connections: Connection[]
   showRotationGizmo: boolean
   showMoveHandle: boolean
 
@@ -49,6 +52,7 @@ export function createSceneSessionStore() {
     inventoryOpen: false,
     explodeAmount: 0,
     isDraggingPiece: false,
+    connections: [],
     showRotationGizmo: true,
     showMoveHandle: true,
 
@@ -64,12 +68,60 @@ export function createSceneSessionStore() {
       set((state) => {
         const moving = state.instances.find((i) => i.id === id)
         if (!moving) return state
-        const delta = findConnectionSnapDelta(moving, position, state.instances)
-        const finalPosition: [number, number, number] = delta
-          ? [position[0] + delta[0], position[1] + delta[1], position[2] + delta[2]]
+
+        // Staleness is checked against the raw drag position, not the
+        // post-snap one: the snap correction below is always smaller than
+        // SNAP_DISTANCE, so it can never flip a connection between stale
+        // and coincident on its own — this sidesteps needing the final
+        // position before it's known.
+        const instancesAtProposed = state.instances.map((i) => (i.id === id ? { ...i, position } : i))
+        const survivingConnections = state.connections.filter((c) => {
+          if (c.pieceAId !== id && c.pieceBId !== id) return true
+          return isConnectionCoincident(c, instancesAtProposed, SNAP_DISTANCE)
+        })
+
+        // Points already claimed by a surviving connection can't be
+        // claimed by a new one — this also means a point that just broke
+        // free above is available again in this same move.
+        const excludePoints = survivingConnections.flatMap((c) => [
+          { pieceId: c.pieceAId, pointIndex: c.pointAIndex },
+          { pieceId: c.pieceBId, pointIndex: c.pointBIndex },
+        ])
+        const match = findClosestConnectionMatch(moving, position, state.instances, excludePoints)
+        const finalPosition: [number, number, number] = match
+          ? [position[0] + match.delta[0], position[1] + match.delta[1], position[2] + match.delta[2]]
           : position
+
+        let nextConnections = survivingConnections
+        if (match) {
+          const alreadyConnected = survivingConnections.some(
+            (c) =>
+              (c.pieceAId === id &&
+                c.pieceBId === match.otherId &&
+                c.pointAIndex === match.movingPointIndex &&
+                c.pointBIndex === match.otherPointIndex) ||
+              (c.pieceBId === id &&
+                c.pieceAId === match.otherId &&
+                c.pointBIndex === match.movingPointIndex &&
+                c.pointAIndex === match.otherPointIndex),
+          )
+          if (!alreadyConnected) {
+            nextConnections = [
+              ...survivingConnections,
+              {
+                id: `conn-${id}-${match.otherId}-${Date.now()}`,
+                pieceAId: id,
+                pieceBId: match.otherId,
+                pointAIndex: match.movingPointIndex,
+                pointBIndex: match.otherPointIndex,
+              },
+            ]
+          }
+        }
+
         return {
           instances: state.instances.map((i) => (i.id === id ? { ...i, position: finalPosition } : i)),
+          connections: nextConnections,
         }
       }),
 
@@ -138,6 +190,9 @@ export function createSceneSessionStore() {
     deleteSelected: () =>
       set((state) => ({
         instances: state.instances.filter((i) => i.id !== state.selectedId),
+        connections: state.connections.filter(
+          (c) => c.pieceAId !== state.selectedId && c.pieceBId !== state.selectedId,
+        ),
         selectedId: null,
       })),
 
