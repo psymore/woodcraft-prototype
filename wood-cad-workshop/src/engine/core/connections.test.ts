@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { registerComponent, clearRegistry } from '../registry/registry'
-import { isConnectionCoincident, pruneStaleConnections, getConnectedPieceIds } from './connections'
+import { isConnectionCoincident, pruneStaleConnections, getConnectedPieceIds, findConnectionCandidates } from './connections'
 import type { ComponentDefinition, ComponentInstance, Connection } from './types'
 
 function rodDefinition(): ComponentDefinition {
@@ -241,5 +241,104 @@ describe('getConnectedPieceIds', () => {
       { id: 'c2', pieceAId: 'x', pieceBId: 'y', pointAIndex: 0, pointBIndex: 0 },
     ]
     expect(getConnectedPieceIds('a', connections)).toEqual(new Set(['a', 'b']))
+  })
+})
+
+describe('findConnectionCandidates', () => {
+  it('returns an empty array when no unclaimed points are within threshold', () => {
+    const rod: ComponentInstance = {
+      id: 'r1',
+      componentDefinitionId: 'test_rod',
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+      dimensions: { diameter: 1, length: 10 },
+      material: '#000',
+    }
+    const foot: ComponentInstance = {
+      id: 'f1',
+      componentDefinitionId: 'test_foot',
+      position: [0, 0, 100],
+      rotation: [0, 0, 0],
+      dimensions: { thickness: 1, width: 1, length: 1 },
+      material: '#000',
+    }
+    expect(findConnectionCandidates([rod, foot], [], 3)).toEqual([])
+  })
+
+  it('returns one candidate for one unclaimed pair within threshold', () => {
+    const rod: ComponentInstance = {
+      id: 'r1',
+      componentDefinitionId: 'test_rod',
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+      dimensions: { diameter: 1, length: 10 },
+      material: '#000',
+    }
+    const foot: ComponentInstance = {
+      id: 'f1',
+      componentDefinitionId: 'test_foot',
+      position: [0, 0, 5],
+      rotation: [0, 0, 0],
+      dimensions: { thickness: 1, width: 1, length: 1 },
+      material: '#000',
+    }
+    // rod's far end (local z=+5, index 1) is at world z=5; foot's point
+    // (index 0) is also at world z=5 — coincident, within threshold 3.
+    expect(findConnectionCandidates([rod, foot], [], 3)).toEqual([
+      { pieceAId: 'r1', pieceBId: 'f1', pointAIndex: 1, pointBIndex: 0 },
+    ])
+  })
+
+  it('excludes a pair whose points are already claimed by an existing connection', () => {
+    const rod: ComponentInstance = {
+      id: 'r1',
+      componentDefinitionId: 'test_rod',
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+      dimensions: { diameter: 1, length: 10 },
+      material: '#000',
+    }
+    const foot: ComponentInstance = {
+      id: 'f1',
+      componentDefinitionId: 'test_foot',
+      position: [0, 0, 5],
+      rotation: [0, 0, 0],
+      dimensions: { thickness: 1, width: 1, length: 1 },
+      material: '#000',
+    }
+    const existing: Connection = { id: 'c1', pieceAId: 'r1', pieceBId: 'f1', pointAIndex: 1, pointBIndex: 0 }
+    expect(findConnectionCandidates([rod, foot], [existing], 3)).toEqual([])
+  })
+
+  it('when a point is within range of two others, only the closer pairing becomes a candidate', () => {
+    const rod: ComponentInstance = {
+      id: 'r1',
+      componentDefinitionId: 'test_rod',
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+      dimensions: { diameter: 1, length: 10 },
+      material: '#000',
+    }
+    const nearFoot: ComponentInstance = {
+      id: 'f1',
+      componentDefinitionId: 'test_foot',
+      position: [0, 0, 5],
+      rotation: [0, 0, 0],
+      dimensions: { thickness: 1, width: 1, length: 1 },
+      material: '#000',
+    }
+    const fartherFoot: ComponentInstance = {
+      id: 'f2',
+      componentDefinitionId: 'test_foot',
+      position: [0, 0, 6],
+      rotation: [0, 0, 0],
+      dimensions: { thickness: 1, width: 1, length: 1 },
+      material: '#000',
+    }
+    // rod's index-1 point (world z=5) is within threshold 3 of BOTH f1
+    // (world z=5, distance 0) and f2 (world z=6, distance 1) — only the
+    // closer pairing (f1) should become a candidate.
+    const result = findConnectionCandidates([rod, nearFoot, fartherFoot], [], 3)
+    expect(result).toEqual([{ pieceAId: 'r1', pieceBId: 'f1', pointAIndex: 1, pointBIndex: 0 }])
   })
 })
