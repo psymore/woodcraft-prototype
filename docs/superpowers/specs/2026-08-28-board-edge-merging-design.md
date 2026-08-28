@@ -1,6 +1,11 @@
 # Board Edge-to-Edge Merging (Sub-project A)
 
-Status: approved, implementation pending.
+Status: superseded before implementation — see
+[2026-08-29-connection-anchor-primitives-design.md](2026-08-29-connection-anchor-primitives-design.md),
+which folds this spec's discrete edge-center points directly into a
+richer anchor-primitive model (point/segment/face) rather than shipping
+them first in the plain-point shape described below and touching the
+same code again immediately after. Kept for historical context only.
 
 ## Context
 
