@@ -1,7 +1,7 @@
 import type { ComponentInstance } from './types'
 import { getComponent } from '../registry/registry'
 
-export const SNAP_DISTANCE = 1.5
+export const SNAP_DISTANCE = 0.7
 
 // Local-space attach points for this piece's shape, before its position/
 // rotation are applied. See ConnectionRole (core/types.ts) for what each
