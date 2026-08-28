@@ -70,13 +70,19 @@ export function createSceneSessionStore() {
         const moving = state.instances.find((i) => i.id === id)
         if (!moving) return state
 
-        const instancesAtProposed = state.instances.map((i) => (i.id === id ? { ...i, position } : i))
-        const survivingConnections = pruneStaleConnections(instancesAtProposed, state.connections, SNAP_DISTANCE)
+        // Group membership comes from the CURRENT connection graph — not a
+        // position/distance-filtered snapshot. A uniform translation can
+        // never change a connected pair's relative distance, so deriving
+        // "who moves together" from anything but the raw topology risks a
+        // large single-call delta (e.g. typing a new value in the
+        // Inspector, or a fast drag) spuriously excluding a genuinely
+        // connected piece from the move.
+        const groupIds = getConnectedPieceIds(id, state.connections)
 
-        // Points already claimed by a surviving connection can't be
-        // claimed by a new one — this also means a point that just broke
-        // free above is available again in this same move.
-        const excludePoints = survivingConnections.flatMap((c) => [
+        // A point already claimed by ANY existing connection — anywhere in
+        // the scene, not just on the dragged piece — can't be claimed by a
+        // new one.
+        const excludePoints = state.connections.flatMap((c) => [
           { pieceId: c.pieceAId, pointIndex: c.pointAIndex },
           { pieceId: c.pieceBId, pointIndex: c.pointBIndex },
         ])
@@ -85,16 +91,15 @@ export function createSceneSessionStore() {
           ? [position[0] + match.delta[0], position[1] + match.delta[1], position[2] + match.delta[2]]
           : position
 
-        // The dragged piece's real displacement this call, including any
+        // The dragged piece's actual displacement this call, including any
         // snap correction — every other member of its connected assembly
         // rides along by exactly this much, so relative offsets (and their
-        // own connections to each other) are preserved.
+        // existing connections to each other) are preserved exactly.
         const delta: [number, number, number] = [
           finalPosition[0] - moving.position[0],
           finalPosition[1] - moving.position[1],
           finalPosition[2] - moving.position[2],
         ]
-        const groupIds = getConnectedPieceIds(id, survivingConnections)
 
         const instancesAtFinal = state.instances.map((i) => {
           if (i.id === id) return { ...i, position: finalPosition }
@@ -108,15 +113,13 @@ export function createSceneSessionStore() {
             ],
           }
         })
-        // Re-prune against the FINAL (post-snap, post-group-translation)
-        // positions: the snap correction above can be up to SNAP_DISTANCE
-        // and can move a different anchor point out of range of an
-        // unrelated surviving connection, so the first prune (against the
-        // pre-snap position) isn't sufficient on its own. Every group
-        // member moved by the same delta, so connections *within* the
-        // group survive this pass unchanged; only connections to pieces
-        // outside the group (now left behind) can be pruned here.
-        let nextConnections = pruneStaleConnections(instancesAtFinal, survivingConnections, SNAP_DISTANCE)
+        // Prune against the FINAL, fully-moved positions. Every
+        // group-internal connection is translation-invariant by
+        // construction (both endpoints moved by the identical delta) and
+        // will always still measure as coincident here — this pass is a
+        // defensive check, not the mechanism that decides group
+        // membership.
+        let nextConnections = pruneStaleConnections(instancesAtFinal, state.connections, SNAP_DISTANCE)
 
         if (match) {
           nextConnections = [
