@@ -48,7 +48,7 @@ describe('movePiece — group translation', () => {
     const store = createSceneSessionStore()
     store.setState({ instances: [r1, r2], connections: [connection] })
 
-    // Drag r1 far away by a delta well past SNAP_DISTANCE (3) — regression
+    // Drag r1 far away by a delta well past SNAP_DISTANCE — regression
     // test for the earlier stranded-neighbor bug, where a large single-call
     // delta caused group membership (derived from a stale, distance-filtered
     // snapshot) to spuriously exclude r2 from the move.
