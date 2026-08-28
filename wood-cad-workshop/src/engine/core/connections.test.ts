@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { registerComponent, clearRegistry } from '../registry/registry'
-import { isConnectionCoincident, pruneStaleConnections } from './connections'
+import { isConnectionCoincident, pruneStaleConnections, getConnectedPieceIds } from './connections'
 import type { ComponentDefinition, ComponentInstance, Connection } from './types'
 
 function rodDefinition(): ComponentDefinition {
@@ -190,5 +190,56 @@ describe('pruneStaleConnections', () => {
     const connections: Connection[] = [{ id: 'c1', pieceAId: 'r1', pieceBId: 'f1', pointAIndex: 1, pointBIndex: 0 }]
     const result = pruneStaleConnections([rod, foot], connections, 3)
     expect(result).toBe(connections)
+  })
+})
+
+describe('getConnectedPieceIds', () => {
+  it('returns just the piece itself when it has no connections', () => {
+    const connections: Connection[] = []
+    expect(getConnectedPieceIds('a', connections)).toEqual(new Set(['a']))
+  })
+
+  it('includes a single directly connected piece', () => {
+    const connections: Connection[] = [
+      { id: 'c1', pieceAId: 'a', pieceBId: 'b', pointAIndex: 0, pointBIndex: 0 },
+    ]
+    expect(getConnectedPieceIds('a', connections)).toEqual(new Set(['a', 'b']))
+  })
+
+  it('follows a transitive chain A-B-C-D starting from either end', () => {
+    const connections: Connection[] = [
+      { id: 'c1', pieceAId: 'a', pieceBId: 'b', pointAIndex: 0, pointBIndex: 0 },
+      { id: 'c2', pieceAId: 'b', pieceBId: 'c', pointAIndex: 1, pointBIndex: 0 },
+      { id: 'c3', pieceAId: 'c', pieceBId: 'd', pointAIndex: 1, pointBIndex: 0 },
+    ]
+    expect(getConnectedPieceIds('a', connections)).toEqual(new Set(['a', 'b', 'c', 'd']))
+    expect(getConnectedPieceIds('d', connections)).toEqual(new Set(['a', 'b', 'c', 'd']))
+  })
+
+  it('follows a branch — one piece connected to two others', () => {
+    const connections: Connection[] = [
+      { id: 'c1', pieceAId: 'bar', pieceBId: 'postLeft', pointAIndex: 0, pointBIndex: 0 },
+      { id: 'c2', pieceAId: 'bar', pieceBId: 'postRight', pointAIndex: 1, pointBIndex: 0 },
+    ]
+    expect(getConnectedPieceIds('postLeft', connections)).toEqual(
+      new Set(['bar', 'postLeft', 'postRight']),
+    )
+  })
+
+  it('terminates and returns the correct set when the graph has a cycle', () => {
+    const connections: Connection[] = [
+      { id: 'c1', pieceAId: 'a', pieceBId: 'b', pointAIndex: 0, pointBIndex: 0 },
+      { id: 'c2', pieceAId: 'b', pieceBId: 'c', pointAIndex: 1, pointBIndex: 0 },
+      { id: 'c3', pieceAId: 'c', pieceBId: 'a', pointAIndex: 1, pointBIndex: 1 },
+    ]
+    expect(getConnectedPieceIds('a', connections)).toEqual(new Set(['a', 'b', 'c']))
+  })
+
+  it('does not include pieces from a disconnected component', () => {
+    const connections: Connection[] = [
+      { id: 'c1', pieceAId: 'a', pieceBId: 'b', pointAIndex: 0, pointBIndex: 0 },
+      { id: 'c2', pieceAId: 'x', pieceBId: 'y', pointAIndex: 0, pointBIndex: 0 },
+    ]
+    expect(getConnectedPieceIds('a', connections)).toEqual(new Set(['a', 'b']))
   })
 })

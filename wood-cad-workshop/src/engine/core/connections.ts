@@ -43,3 +43,27 @@ export function pruneStaleConnections(
   const surviving = connections.filter((c) => isConnectionCoincident(c, instances, threshold))
   return surviving.length === connections.length ? connections : surviving
 }
+
+// Breadth-first traversal of the connection graph (each Connection is an
+// undirected edge between pieceAId and pieceBId), starting from pieceId.
+// Returns the full connected component, including pieceId itself —
+// visited-set-guarded so a cycle in the graph terminates normally.
+export function getConnectedPieceIds(pieceId: string, connections: Connection[]): Set<string> {
+  const visited = new Set<string>([pieceId])
+  const queue = [pieceId]
+
+  while (queue.length > 0) {
+    const current = queue.shift() as string
+    for (const c of connections) {
+      let neighbor: string | null = null
+      if (c.pieceAId === current) neighbor = c.pieceBId
+      else if (c.pieceBId === current) neighbor = c.pieceAId
+      if (neighbor !== null && !visited.has(neighbor)) {
+        visited.add(neighbor)
+        queue.push(neighbor)
+      }
+    }
+  }
+
+  return visited
+}
