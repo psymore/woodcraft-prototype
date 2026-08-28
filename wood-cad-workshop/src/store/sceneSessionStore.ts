@@ -9,6 +9,7 @@ import {
   createSeedInstances,
   findClosestConnectionMatch,
   getComponent,
+  getConnectedPieceIds,
   pruneStaleConnections,
   SNAP_DISTANCE,
 } from '../engine'
@@ -84,12 +85,37 @@ export function createSceneSessionStore() {
           ? [position[0] + match.delta[0], position[1] + match.delta[1], position[2] + match.delta[2]]
           : position
 
-        const instancesAtFinal = state.instances.map((i) => (i.id === id ? { ...i, position: finalPosition } : i))
-        // Re-prune against the FINAL (post-snap) position: the snap
-        // correction above can be up to SNAP_DISTANCE and can move a
-        // different anchor point on this same piece out of range of an
+        // The dragged piece's real displacement this call, including any
+        // snap correction — every other member of its connected assembly
+        // rides along by exactly this much, so relative offsets (and their
+        // own connections to each other) are preserved.
+        const delta: [number, number, number] = [
+          finalPosition[0] - moving.position[0],
+          finalPosition[1] - moving.position[1],
+          finalPosition[2] - moving.position[2],
+        ]
+        const groupIds = getConnectedPieceIds(id, survivingConnections)
+
+        const instancesAtFinal = state.instances.map((i) => {
+          if (i.id === id) return { ...i, position: finalPosition }
+          if (!groupIds.has(i.id)) return i
+          return {
+            ...i,
+            position: [i.position[0] + delta[0], i.position[1] + delta[1], i.position[2] + delta[2]] as [
+              number,
+              number,
+              number,
+            ],
+          }
+        })
+        // Re-prune against the FINAL (post-snap, post-group-translation)
+        // positions: the snap correction above can be up to SNAP_DISTANCE
+        // and can move a different anchor point out of range of an
         // unrelated surviving connection, so the first prune (against the
-        // pre-snap position) isn't sufficient on its own.
+        // pre-snap position) isn't sufficient on its own. Every group
+        // member moved by the same delta, so connections *within* the
+        // group survive this pass unchanged; only connections to pieces
+        // outside the group (now left behind) can be pruned here.
         let nextConnections = pruneStaleConnections(instancesAtFinal, survivingConnections, SNAP_DISTANCE)
 
         if (match) {
