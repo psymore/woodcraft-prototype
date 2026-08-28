@@ -4,17 +4,18 @@ import { create } from 'zustand'
 import * as THREE from 'three'
 import type { ComponentDefinition, ComponentInstance, Connection, ConnectionCandidate, Dimensions } from '../engine'
 import {
+  closestBetweenWorldAnchors,
   createInstance,
   createPullupKitInstances,
   createSeedInstances,
   findClosestConnectionMatch,
+  getAnchors,
   getComponent,
   getConnectedPieceIds,
-  getConnectionPoints,
-  isConnectionCoincident,
+  isAnchorClaimable,
   pruneStaleConnections,
   SNAP_DISTANCE,
-  toWorldPoint,
+  toWorldAnchor,
 } from '../engine'
 
 interface SceneSessionState {
@@ -84,12 +85,18 @@ export function createSceneSessionStore() {
         // connected piece from the move.
         const groupIds = getConnectedPieceIds(id, state.connections)
 
-        // A point already claimed by ANY existing connection — anywhere in
-        // the scene, not just on the dragged piece — can't be claimed by a
-        // new one.
-        const excludePoints = state.connections.flatMap((c) => [
-          { pieceId: c.pieceAId, pointIndex: c.pointAIndex },
-          { pieceId: c.pieceBId, pointIndex: c.pointBIndex },
+        // A point-kind anchor already claimed by ANY existing connection
+        // — anywhere in the scene, not just on the dragged piece — can't
+        // be claimed by a new one. Segment/face anchors are never
+        // excluded, since they can host multiple simultaneous
+        // connections (see isAnchorClaimable).
+        const excludeAnchors = state.connections.flatMap((c) => [
+          ...(isAnchorClaimable(state.instances, c.pieceAId, c.a.anchorIndex)
+            ? [{ pieceId: c.pieceAId, anchorIndex: c.a.anchorIndex }]
+            : []),
+          ...(isAnchorClaimable(state.instances, c.pieceBId, c.b.anchorIndex)
+            ? [{ pieceId: c.pieceBId, anchorIndex: c.b.anchorIndex }]
+            : []),
         ])
         // A rigid translation can never change any two group members'
         // relative distance, so searching the dragged piece's own group for
@@ -101,7 +108,7 @@ export function createSceneSessionStore() {
           moving,
           position,
           state.instances.filter((i) => !groupIds.has(i.id)),
-          excludePoints,
+          excludeAnchors,
         )
         const finalPosition: [number, number, number] = match
           ? [position[0] + match.delta[0], position[1] + match.delta[1], position[2] + match.delta[2]]
@@ -146,42 +153,49 @@ export function createSceneSessionStore() {
     // Persists a candidate found by findConnectionCandidates, after
     // translating pieceB's current connected group (via
     // getConnectedPieceIds, the same rigid-group convention movePiece
-    // uses) by the exact delta that brings the two points into
-    // coincidence — a candidate is only ever within SNAP_DISTANCE, not
-    // necessarily touching, and a confirmed connection must always be an
-    // exact, touching joint, never a frozen gap. Re-validates coincidence
-    // at click time (SNAP_DISTANCE, same threshold the candidate was
-    // found with) in case something else moved a piece between the
-    // candidate being rendered and the click landing — if the candidate
-    // has gone stale, this silently no-ops. Also no-ops if either point is
-    // already claimed by an existing connection (a defensive guard against
-    // a duplicate confirm; isConnectionCoincident's own instances.find
-    // already covers a missing piece, so there's no separate existence
-    // check here).
+    // uses) by the exact delta that brings the two anchors' closest
+    // points into coincidence — a candidate is only ever within
+    // SNAP_DISTANCE, not necessarily touching, and a confirmed connection
+    // must always be an exact, touching joint, never a frozen gap.
+    // Re-derives the match at click time (in case something else moved a
+    // piece between the candidate being rendered and the click landing)
+    // and no-ops if it's gone stale. Also no-ops if either side's anchor
+    // is point-kind AND already claimed by an existing connection (a
+    // defensive guard against a duplicate confirm) — segment/face
+    // anchors never conflict this way, since they can host multiple
+    // connections.
     confirmConnection: (candidate) =>
       set((state) => {
-        if (!isConnectionCoincident(candidate, state.instances, SNAP_DISTANCE)) return state
-        const alreadyClaimed = state.connections.some(
-          (c) =>
-            (c.pieceAId === candidate.pieceAId && c.pointAIndex === candidate.pointAIndex) ||
-            (c.pieceBId === candidate.pieceBId && c.pointBIndex === candidate.pointBIndex) ||
-            (c.pieceAId === candidate.pieceBId && c.pointAIndex === candidate.pointBIndex) ||
-            (c.pieceBId === candidate.pieceAId && c.pointBIndex === candidate.pointAIndex),
-        )
-        if (alreadyClaimed) return state
-
         const pieceA = state.instances.find((i) => i.id === candidate.pieceAId)
         const pieceB = state.instances.find((i) => i.id === candidate.pieceBId)
         if (!pieceA || !pieceB) return state
-        const localA = getConnectionPoints(pieceA)[candidate.pointAIndex]
-        const localB = getConnectionPoints(pieceB)[candidate.pointBIndex]
-        if (!localA || !localB) return state
-        const worldA = toWorldPoint(pieceA, localA)
-        const worldB = toWorldPoint(pieceB, localB)
+
+        const anchorA = getAnchors(pieceA)[candidate.a.anchorIndex]
+        const anchorB = getAnchors(pieceB)[candidate.b.anchorIndex]
+        if (!anchorA || !anchorB) return state
+
+        const worldA = toWorldAnchor(pieceA, anchorA)
+        const worldB = toWorldAnchor(pieceB, anchorB)
+        const match = closestBetweenWorldAnchors(worldA, worldB)
+        if (match.distance > SNAP_DISTANCE) return state
+
+        const claimConflict = state.connections.some((c) => {
+          const aConflict =
+            isAnchorClaimable(state.instances, candidate.pieceAId, candidate.a.anchorIndex) &&
+            ((c.pieceAId === candidate.pieceAId && c.a.anchorIndex === candidate.a.anchorIndex) ||
+              (c.pieceBId === candidate.pieceAId && c.b.anchorIndex === candidate.a.anchorIndex))
+          const bConflict =
+            isAnchorClaimable(state.instances, candidate.pieceBId, candidate.b.anchorIndex) &&
+            ((c.pieceAId === candidate.pieceBId && c.a.anchorIndex === candidate.b.anchorIndex) ||
+              (c.pieceBId === candidate.pieceBId && c.b.anchorIndex === candidate.b.anchorIndex))
+          return aConflict || bConflict
+        })
+        if (claimConflict) return state
+
         const delta: [number, number, number] = [
-          worldA[0] - worldB[0],
-          worldA[1] - worldB[1],
-          worldA[2] - worldB[2],
+          match.pointA[0] - match.pointB[0],
+          match.pointA[1] - match.pointB[1],
+          match.pointA[2] - match.pointB[2],
         ]
 
         const groupIds = getConnectedPieceIds(candidate.pieceBId, state.connections)
@@ -203,8 +217,11 @@ export function createSceneSessionStore() {
           connections: [
             ...state.connections,
             {
-              id: `conn-${candidate.pieceAId}-${candidate.pieceBId}-${candidate.pointAIndex}-${candidate.pointBIndex}`,
-              ...candidate,
+              id: `conn-${candidate.pieceAId}-${candidate.pieceBId}-${candidate.a.anchorIndex}-${candidate.b.anchorIndex}`,
+              pieceAId: candidate.pieceAId,
+              pieceBId: candidate.pieceBId,
+              a: { anchorIndex: candidate.a.anchorIndex, param: match.paramA },
+              b: { anchorIndex: candidate.b.anchorIndex, param: match.paramB },
             },
           ],
         }

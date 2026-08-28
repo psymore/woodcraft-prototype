@@ -43,7 +43,7 @@ describe('movePiece — group translation', () => {
     // idx1 point (world z=5) coincides with r2's idx0 point (world z=5).
     const r1 = rod('r1', [0, 0, 0])
     const r2 = rod('r2', [0, 0, 10])
-    const connection: Connection = { id: 'c1', pieceAId: 'r1', pieceBId: 'r2', pointAIndex: 1, pointBIndex: 0 }
+    const connection: Connection = { id: 'c1', pieceAId: 'r1', pieceBId: 'r2', a: { anchorIndex: 1 }, b: { anchorIndex: 0 } }
 
     const store = createSceneSessionStore()
     store.setState({ instances: [r1, r2], connections: [connection] })
@@ -73,8 +73,8 @@ describe('movePiece — group translation', () => {
     const r1 = rod('r1', [0, 0, 0]) // points: z=-5 (free), z=5 (-> r2)
     const r2 = rod('r2', [0, 0, 10]) // points: z=5 (-> r1), z=15 (-> r3)
     const r3 = rod('r3', [0, 0, 20]) // points: z=15 (-> r2), z=25 (free)
-    const c1: Connection = { id: 'c1', pieceAId: 'r1', pieceBId: 'r2', pointAIndex: 1, pointBIndex: 0 }
-    const c2: Connection = { id: 'c2', pieceAId: 'r2', pieceBId: 'r3', pointAIndex: 1, pointBIndex: 0 }
+    const c1: Connection = { id: 'c1', pieceAId: 'r1', pieceBId: 'r2', a: { anchorIndex: 1 }, b: { anchorIndex: 0 } }
+    const c2: Connection = { id: 'c2', pieceAId: 'r2', pieceBId: 'r3', a: { anchorIndex: 1 }, b: { anchorIndex: 0 } }
 
     const store = createSceneSessionStore()
     store.setState({ instances: [r1, r2, r3], connections: [c1, c2] })
