@@ -1,6 +1,6 @@
 # Explicit Connection Confirm / Detach
 
-Status: approved, implementation pending.
+Status: implemented.
 
 ## Context
 
@@ -154,3 +154,6 @@ test needs updating.
 6. Build the pull-up kit, confirm both bar-to-post joints via their orange
    orbs, then drag the bar — both posts should move with it (rigid group
    movement still works once explicitly confirmed).
+7. Quickly double-tap an orange orb (confirm, then immediately tap again
+   where the now-red marker appears) — the connection should stay
+   confirmed, not silently detach.

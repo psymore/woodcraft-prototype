@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
 import { findConnectionCandidates, getConnectionPoints, SNAP_DISTANCE, toWorldPoint } from '../engine'
 import type { ConnectionCandidate } from '../engine'
@@ -9,6 +10,12 @@ import { useSceneSession } from '../store/sceneSessionStore'
 const MARKER_RADIUS = 0.5
 const CANDIDATE_COLOR = '#ff8c00'
 const CONNECTED_COLOR = '#d9342b'
+// A fast double-tap confirms then instantly detaches, since the two
+// markers sit at the identical screen position and React flushes both
+// synchronous clicks before either marker's position updates. This
+// cooldown makes a detach click on a connection ignored if it lands within
+// this many ms of that same connection's own confirm click.
+const DETACH_COOLDOWN_MS = 400
 
 // One marker per active Connection, plus one per not-yet-confirmed
 // candidate (two unclaimed, compatible points within SNAP_DISTANCE of
@@ -20,6 +27,7 @@ export function ConnectionMarkers() {
   const explodeAmount = useSceneSession((s) => s.explodeAmount)
   const confirmConnection = useSceneSession((s) => s.confirmConnection)
   const detachConnection = useSceneSession((s) => s.detachConnection)
+  const justConfirmedAt = useRef<Map<string, number>>(new Map())
 
   if (explodeAmount > 0) return null
 
@@ -62,6 +70,8 @@ export function ConnectionMarkers() {
             onPointerDown={stop}
             onClick={(e: ThreeEvent<MouseEvent>) => {
               stop(e)
+              const connectionId = `conn-${candidate.pieceAId}-${candidate.pieceBId}-${candidate.pointAIndex}-${candidate.pointBIndex}`
+              justConfirmedAt.current.set(connectionId, Date.now())
               confirmConnection(candidate)
             }}
           >
@@ -80,6 +90,8 @@ export function ConnectionMarkers() {
             onPointerDown={stop}
             onClick={(e: ThreeEvent<MouseEvent>) => {
               stop(e)
+              const confirmedAt = justConfirmedAt.current.get(connection.id)
+              if (confirmedAt !== undefined && Date.now() - confirmedAt < DETACH_COOLDOWN_MS) return
               detachConnection(connection.id)
             }}
           >

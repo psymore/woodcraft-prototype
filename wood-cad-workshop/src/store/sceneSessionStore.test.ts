@@ -81,12 +81,15 @@ describe('movePiece — group translation', () => {
 
     // Drag r1 to z=29: its free point (idx0) would land at world z=24 —
     // only 1 unit from r3's CURRENT (pre-move) free point at world z=25.
-    // Pre-fix, findClosestConnectionMatch searched r3 (a fellow group
-    // member) as a match candidate and found this stale-position "match",
-    // snapping r1 to z=30 and persisting a bogus r1-r3 connection whose gap
-    // never closes (r3 rides along by the same delta). Post-fix, r3 (being
-    // in r1's own connected group) is excluded from the candidate list, so
-    // no match is found and r1 lands exactly at the proposed position.
+    // If findClosestConnectionMatch searched r3 (a fellow group member) as
+    // a match candidate, it would find this stale-position "match" and
+    // snap r1 to z=30 — silently misplacing the dragged piece off the
+    // position the user actually dragged it to, using a position r3 is
+    // about to move away from anyway (it rides along by the same delta).
+    // r3 (being in r1's own connected group) is excluded from the
+    // candidate list, so no match is found and r1 lands exactly at the
+    // proposed position — the assertions below on nextR1/nextR2/nextR3
+    // guard against that stale-position match regressing.
     store.getState().movePiece('r1', [0, 0, 29])
 
     const { instances, connections } = store.getState()

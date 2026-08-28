@@ -341,4 +341,53 @@ describe('findConnectionCandidates', () => {
     const result = findConnectionCandidates([rod, nearFoot, fartherFoot], [], 3)
     expect(result).toEqual([{ pieceAId: 'r1', pieceBId: 'f1', pointAIndex: 1, pointBIndex: 0 }])
   })
+
+  it('leaves the losing point in a 3-way tie free to pair with a different piece', () => {
+    // r1's index-1 point (world z=5) is closer to f1 (world z=5, d=0) than
+    // to f2 (world z=6, d=1) — same tiebreak as the previous test. But f2
+    // is ALSO within threshold of r2's index-0 point (world z=8, d=2), and
+    // losing the r1 pairing should leave f2 free to pair with r2 instead of
+    // being excluded entirely (the previous test's loser had nothing else
+    // in range, so this exercises the other half of the spec's rule:
+    // "leaving the point on the losing side free to pair with something
+    // else [OR nothing]").
+    const r1: ComponentInstance = {
+      id: 'r1',
+      componentDefinitionId: 'test_rod',
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+      dimensions: { diameter: 1, length: 10 },
+      material: '#000',
+    }
+    const f1: ComponentInstance = {
+      id: 'f1',
+      componentDefinitionId: 'test_foot',
+      position: [0, 0, 5],
+      rotation: [0, 0, 0],
+      dimensions: { thickness: 1, width: 1, length: 1 },
+      material: '#000',
+    }
+    const f2: ComponentInstance = {
+      id: 'f2',
+      componentDefinitionId: 'test_foot',
+      position: [0, 0, 6],
+      rotation: [0, 0, 0],
+      dimensions: { thickness: 1, width: 1, length: 1 },
+      material: '#000',
+    }
+    const r2: ComponentInstance = {
+      id: 'r2',
+      componentDefinitionId: 'test_rod',
+      position: [0, 0, 13],
+      rotation: [0, 0, 0],
+      dimensions: { diameter: 1, length: 10 },
+      material: '#000',
+    }
+    // r2's points are at world z=8 (index 0) and z=18 (index 1).
+    const result = findConnectionCandidates([r1, f1, f2, r2], [], 3)
+    expect(result).toEqual([
+      { pieceAId: 'r1', pieceBId: 'f1', pointAIndex: 1, pointBIndex: 0 },
+      { pieceAId: 'f2', pieceBId: 'r2', pointAIndex: 0, pointBIndex: 0 },
+    ])
+  })
 })

@@ -10,9 +10,11 @@ import {
   findClosestConnectionMatch,
   getComponent,
   getConnectedPieceIds,
+  getConnectionPoints,
   isConnectionCoincident,
   pruneStaleConnections,
   SNAP_DISTANCE,
+  toWorldPoint,
 } from '../engine'
 
 interface SceneSessionState {
@@ -141,19 +143,63 @@ export function createSceneSessionStore() {
         }
       }),
 
-    // Persists a candidate found by findConnectionCandidates. Re-validates
-    // coincidence at click time (SNAP_DISTANCE, same threshold the
-    // candidate was found with) in case something else moved a piece
-    // between the candidate being rendered and the click landing — if the
-    // candidate has gone stale, this silently no-ops rather than
-    // persisting a connection whose points aren't actually touching.
+    // Persists a candidate found by findConnectionCandidates, after
+    // translating pieceB's current connected group (via
+    // getConnectedPieceIds, the same rigid-group convention movePiece
+    // uses) by the exact delta that brings the two points into
+    // coincidence — a candidate is only ever within SNAP_DISTANCE, not
+    // necessarily touching, and a confirmed connection must always be an
+    // exact, touching joint, never a frozen gap. Re-validates coincidence
+    // at click time (SNAP_DISTANCE, same threshold the candidate was
+    // found with) in case something else moved a piece between the
+    // candidate being rendered and the click landing — if the candidate
+    // has gone stale, this silently no-ops. Also no-ops if either point is
+    // already claimed by an existing connection (a defensive guard against
+    // a duplicate confirm; isConnectionCoincident's own instances.find
+    // already covers a missing piece, so there's no separate existence
+    // check here).
     confirmConnection: (candidate) =>
       set((state) => {
+        if (!isConnectionCoincident(candidate, state.instances, SNAP_DISTANCE)) return state
+        const alreadyClaimed = state.connections.some(
+          (c) =>
+            (c.pieceAId === candidate.pieceAId && c.pointAIndex === candidate.pointAIndex) ||
+            (c.pieceBId === candidate.pieceBId && c.pointBIndex === candidate.pointBIndex) ||
+            (c.pieceAId === candidate.pieceBId && c.pointAIndex === candidate.pointBIndex) ||
+            (c.pieceBId === candidate.pieceAId && c.pointBIndex === candidate.pointAIndex),
+        )
+        if (alreadyClaimed) return state
+
         const pieceA = state.instances.find((i) => i.id === candidate.pieceAId)
         const pieceB = state.instances.find((i) => i.id === candidate.pieceBId)
         if (!pieceA || !pieceB) return state
-        if (!isConnectionCoincident(candidate, state.instances, SNAP_DISTANCE)) return state
+        const localA = getConnectionPoints(pieceA)[candidate.pointAIndex]
+        const localB = getConnectionPoints(pieceB)[candidate.pointBIndex]
+        if (!localA || !localB) return state
+        const worldA = toWorldPoint(pieceA, localA)
+        const worldB = toWorldPoint(pieceB, localB)
+        const delta: [number, number, number] = [
+          worldA[0] - worldB[0],
+          worldA[1] - worldB[1],
+          worldA[2] - worldB[2],
+        ]
+
+        const groupIds = getConnectedPieceIds(candidate.pieceBId, state.connections)
+        const instances = state.instances.map((i) =>
+          groupIds.has(i.id)
+            ? {
+                ...i,
+                position: [i.position[0] + delta[0], i.position[1] + delta[1], i.position[2] + delta[2]] as [
+                  number,
+                  number,
+                  number,
+                ],
+              }
+            : i,
+        )
+
         return {
+          instances,
           connections: [
             ...state.connections,
             {
