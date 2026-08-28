@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { registerComponent, clearRegistry } from '../registry/registry'
-import { findClosestConnectionMatch, findConnectionSnapDelta, getConnectionPoints, toWorldPoint } from './connectionPoints'
+import {
+  getAnchors,
+  toWorldAnchor,
+  closestBetweenWorldAnchors,
+  findClosestConnectionMatch,
+} from './connectionPoints'
 import type { ComponentDefinition, ComponentInstance } from './types'
 
 function rodDefinition(): ComponentDefinition {
@@ -31,14 +36,29 @@ function footDefinition(): ComponentDefinition {
   }
 }
 
+function boardDefinition(): ComponentDefinition {
+  return {
+    id: 'test_board',
+    name: 'Test Board',
+    category: 'WOOD',
+    geometry: { shape: 'box' },
+    defaultDimensions: { thickness: 2, width: 4, length: 10 },
+    material: '#000',
+    connectionRole: 'ends',
+    structuralProperties: {},
+    explodeDirection: null,
+  }
+}
+
 beforeEach(() => {
   clearRegistry()
   registerComponent(rodDefinition())
   registerComponent(footDefinition())
+  registerComponent(boardDefinition())
 })
 
-describe('getConnectionPoints', () => {
-  it('returns two lengthwise ends for an "ends" role', () => {
+describe('getAnchors', () => {
+  it('returns two lengthwise end points for a cylinder "ends" role, unaffected by this change', () => {
     const rod: ComponentInstance = {
       id: 'r1',
       componentDefinitionId: 'test_rod',
@@ -47,13 +67,13 @@ describe('getConnectionPoints', () => {
       dimensions: { diameter: 1, length: 10 },
       material: '#000',
     }
-    expect(getConnectionPoints(rod)).toEqual([
-      [0, 0, -5],
-      [0, 0, 5],
+    expect(getAnchors(rod)).toEqual([
+      { kind: 'point', point: [0, 0, -5] },
+      { kind: 'point', point: [0, 0, 5] },
     ])
   })
 
-  it('returns the center for a "single" role', () => {
+  it('returns the center point for a "single" role', () => {
     const foot: ComponentInstance = {
       id: 'f1',
       componentDefinitionId: 'test_foot',
@@ -62,12 +82,36 @@ describe('getConnectionPoints', () => {
       dimensions: { thickness: 1, width: 1, length: 1 },
       material: '#000',
     }
-    expect(getConnectionPoints(foot)).toEqual([[0, 0, 0]])
+    expect(getAnchors(foot)).toEqual([{ kind: 'point', point: [0, 0, 0] }])
+  })
+
+  it('returns 10 anchors (2 ends + 2 edge points + 2 edge segments + 4 side faces) for a box "ends" role', () => {
+    const board: ComponentInstance = {
+      id: 'b1',
+      componentDefinitionId: 'test_board',
+      position: [0, 0, 0],
+      rotation: [0, 0, 0],
+      dimensions: { thickness: 2, width: 4, length: 10 },
+      material: '#000',
+    }
+    // thickness=2 -> hx=1, width=4 -> hy=2, length=10 -> hz=5
+    expect(getAnchors(board)).toEqual([
+      { kind: 'point', point: [0, 0, -5] },
+      { kind: 'point', point: [0, 0, 5] },
+      { kind: 'point', point: [0, -2, 0] },
+      { kind: 'point', point: [0, 2, 0] },
+      { kind: 'segment', a: [0, -2, -5], b: [0, -2, 5] },
+      { kind: 'segment', a: [0, 2, -5], b: [0, 2, 5] },
+      { kind: 'face', center: [0, -2, 0], uAxis: [1, 0, 0], vAxis: [0, 0, 1], halfU: 1, halfV: 5 },
+      { kind: 'face', center: [0, 2, 0], uAxis: [1, 0, 0], vAxis: [0, 0, 1], halfU: 1, halfV: 5 },
+      { kind: 'face', center: [-1, 0, 0], uAxis: [0, 1, 0], vAxis: [0, 0, 1], halfU: 2, halfV: 5 },
+      { kind: 'face', center: [1, 0, 0], uAxis: [0, 1, 0], vAxis: [0, 0, 1], halfU: 2, halfV: 5 },
+    ])
   })
 })
 
-describe('toWorldPoint', () => {
-  it('applies position and yaw rotation to a local point', () => {
+describe('toWorldAnchor', () => {
+  it('applies position and yaw rotation to a point anchor', () => {
     const instance: ComponentInstance = {
       id: 'r1',
       componentDefinitionId: 'test_rod',
@@ -76,13 +120,14 @@ describe('toWorldPoint', () => {
       dimensions: { diameter: 1, length: 10 },
       material: '#000',
     }
-    const world = toWorldPoint(instance, [0, 0, 5])
-    expect(world[0]).toBeCloseTo(10)
-    expect(world[1]).toBeCloseTo(0)
-    expect(world[2]).toBeCloseTo(5)
+    const world = toWorldAnchor(instance, { kind: 'point', point: [0, 0, 5] })
+    if (world.kind !== 'point') throw new Error('expected point')
+    expect(world.point[0]).toBeCloseTo(10)
+    expect(world.point[1]).toBeCloseTo(0)
+    expect(world.point[2]).toBeCloseTo(5)
   })
 
-  it('applies pitch (X-axis) rotation to a local point', () => {
+  it('applies pitch (X-axis) rotation to a point anchor', () => {
     const instance: ComponentInstance = {
       id: 'r1',
       componentDefinitionId: 'test_rod',
@@ -91,15 +136,118 @@ describe('toWorldPoint', () => {
       dimensions: { diameter: 1, length: 10 },
       material: '#000',
     }
-    const world = toWorldPoint(instance, [0, 0, 5])
-    expect(world[0]).toBeCloseTo(0)
-    expect(world[1]).toBeCloseTo(-5)
-    expect(world[2]).toBeCloseTo(0)
+    const world = toWorldAnchor(instance, { kind: 'point', point: [0, 0, 5] })
+    if (world.kind !== 'point') throw new Error('expected point')
+    expect(world.point[0]).toBeCloseTo(0)
+    expect(world.point[1]).toBeCloseTo(-5)
+    expect(world.point[2]).toBeCloseTo(0)
+  })
+
+  it('rotates a face anchor\'s in-plane axes without translating them, and translates its center', () => {
+    const instance: ComponentInstance = {
+      id: 'b1',
+      componentDefinitionId: 'test_board',
+      position: [0, 0, 0],
+      rotation: [0, Math.PI / 2, 0],
+      dimensions: { thickness: 2, width: 4, length: 10 },
+      material: '#000',
+    }
+    const world = toWorldAnchor(instance, {
+      kind: 'face',
+      center: [0, 0, 0],
+      uAxis: [1, 0, 0],
+      vAxis: [0, 0, 1],
+      halfU: 2,
+      halfV: 3,
+    })
+    if (world.kind !== 'face') throw new Error('expected face')
+    expect(world.center[0]).toBeCloseTo(0)
+    expect(world.center[1]).toBeCloseTo(0)
+    expect(world.center[2]).toBeCloseTo(0)
+    expect(world.uAxis[0]).toBeCloseTo(0)
+    expect(world.uAxis[1]).toBeCloseTo(0)
+    expect(world.uAxis[2]).toBeCloseTo(-1)
+    expect(world.vAxis[0]).toBeCloseTo(1)
+    expect(world.vAxis[1]).toBeCloseTo(0)
+    expect(world.vAxis[2]).toBeCloseTo(0)
+    expect(world.halfU).toBe(2)
+    expect(world.halfV).toBe(3)
   })
 })
 
-describe('findConnectionSnapDelta', () => {
-  it('produces a delta that makes the closest connection points exactly coincide', () => {
+describe('closestBetweenWorldAnchors', () => {
+  it('point-point: reports straight-line distance and both points unchanged', () => {
+    const match = closestBetweenWorldAnchors(
+      { kind: 'point', point: [0, 0, 0] },
+      { kind: 'point', point: [0, 0, 3] },
+    )
+    expect(match.distance).toBeCloseTo(3)
+    expect(match.pointA).toEqual([0, 0, 0])
+    expect(match.pointB).toEqual([0, 0, 3])
+    expect(match.paramA).toBeUndefined()
+    expect(match.paramB).toBeUndefined()
+  })
+
+  it('point-segment: finds the interior closest point and reports t on the segment side', () => {
+    const match = closestBetweenWorldAnchors(
+      { kind: 'point', point: [0, 1, 5] },
+      { kind: 'segment', a: [0, 0, 0], b: [0, 0, 10] },
+    )
+    expect(match.distance).toBeCloseTo(1)
+    expect(match.pointA).toEqual([0, 1, 5])
+    expect(match.pointB[2]).toBeCloseTo(5)
+    expect(match.paramA).toBeUndefined()
+    expect(match.paramB).toEqual({ t: 0.5 })
+  })
+
+  it('segment-point (mirror image): reports t on the segment (A) side', () => {
+    const match = closestBetweenWorldAnchors(
+      { kind: 'segment', a: [0, 0, 0], b: [0, 0, 10] },
+      { kind: 'point', point: [0, 1, 5] },
+    )
+    expect(match.distance).toBeCloseTo(1)
+    expect(match.pointA[2]).toBeCloseTo(5)
+    expect(match.pointB).toEqual([0, 1, 5])
+    expect(match.paramA).toEqual({ t: 0.5 })
+    expect(match.paramB).toBeUndefined()
+  })
+
+  it('point-face: finds the interior closest point and reports u,v on the face side', () => {
+    const match = closestBetweenWorldAnchors(
+      { kind: 'point', point: [1, 3, 2] },
+      { kind: 'face', center: [0, 0, 0], uAxis: [1, 0, 0], vAxis: [0, 0, 1], halfU: 2, halfV: 5 },
+    )
+    expect(match.distance).toBeCloseTo(3)
+    expect(match.pointB).toEqual([1, 0, 2])
+    expect(match.paramB).toEqual({ u: 1, v: 2 })
+  })
+
+  it('point-face: clamps to the face edge when the projection falls outside it', () => {
+    const match = closestBetweenWorldAnchors(
+      { kind: 'point', point: [5, 0, 2] },
+      { kind: 'face', center: [0, 0, 0], uAxis: [1, 0, 0], vAxis: [0, 0, 1], halfU: 2, halfV: 5 },
+    )
+    expect(match.pointB).toEqual([2, 0, 2])
+    expect(match.paramB).toEqual({ u: 2, v: 2 })
+  })
+
+  it('throws for segment-segment (unsupported this increment)', () => {
+    expect(() =>
+      closestBetweenWorldAnchors(
+        { kind: 'segment', a: [0, 0, 0], b: [0, 0, 10] },
+        { kind: 'segment', a: [1, 0, 0], b: [1, 0, 10] },
+      ),
+    ).toThrow()
+  })
+
+  it('throws for face-face (unsupported this increment)', () => {
+    const face = { kind: 'face' as const, center: [0, 0, 0] as [number, number, number], uAxis: [1, 0, 0] as [number, number, number], vAxis: [0, 0, 1] as [number, number, number], halfU: 2, halfV: 5 }
+    expect(() => closestBetweenWorldAnchors(face, face)).toThrow()
+  })
+})
+
+describe('findClosestConnectionMatch', () => {
+  it('reports which anchors matched, in addition to the delta', () => {
     const rod: ComponentInstance = {
       id: 'r1',
       componentDefinitionId: 'test_rod',
@@ -116,25 +264,13 @@ describe('findConnectionSnapDelta', () => {
       dimensions: { thickness: 1, width: 1, length: 1 },
       material: '#000',
     }
-
-    // Rod's far end (local z=+5) lands at world z=5.5 when proposed at
-    // z=0.5 — 0.5 units from the foot's z=6 point, comfortably inside the
-    // snap threshold.
-    const proposed: [number, number, number] = [0, 0, 0.5]
-    const delta = findConnectionSnapDelta(rod, proposed, [foot])
-    expect(delta).not.toBeNull()
-
-    const snapped: [number, number, number] = [
-      proposed[0] + delta![0],
-      proposed[1] + delta![1],
-      proposed[2] + delta![2],
-    ]
-    const snappedRod: ComponentInstance = { ...rod, position: snapped }
-    const rodEnd = toWorldPoint(snappedRod, getConnectionPoints(snappedRod)[1])
-    const footPoint = toWorldPoint(foot, getConnectionPoints(foot)[0])
-    expect(rodEnd[0]).toBeCloseTo(footPoint[0])
-    expect(rodEnd[1]).toBeCloseTo(footPoint[1])
-    expect(rodEnd[2]).toBeCloseTo(footPoint[2])
+    // rod's far end (local z=+5) lands at world z=5.5 when proposed at
+    // z=0.5 — 0.5 units from the foot's z=6 point, within SNAP_DISTANCE (0.7).
+    const match = findClosestConnectionMatch(rod, [0, 0, 0.5], [foot])
+    expect(match).not.toBeNull()
+    expect(match!.otherId).toBe('f1')
+    expect(match!.movingAnchorIndex).toBe(1) // rod's far end
+    expect(match!.otherAnchorIndex).toBe(0) // foot's only anchor
   })
 
   it('returns null when nothing is within snap distance', () => {
@@ -154,12 +290,10 @@ describe('findConnectionSnapDelta', () => {
       dimensions: { thickness: 1, width: 1, length: 1 },
       material: '#000',
     }
-    expect(findConnectionSnapDelta(rod, [0, 0, 0], [foot])).toBeNull()
+    expect(findClosestConnectionMatch(rod, [0, 0, 0], [foot])).toBeNull()
   })
-})
 
-describe('findClosestConnectionMatch', () => {
-  it('reports which points matched, in addition to the delta', () => {
+  it('excludes anchors already claimed by an existing connection', () => {
     const rod: ComponentInstance = {
       id: 'r1',
       componentDefinitionId: 'test_rod',
@@ -176,37 +310,11 @@ describe('findClosestConnectionMatch', () => {
       dimensions: { thickness: 1, width: 1, length: 1 },
       material: '#000',
     }
-    const match = findClosestConnectionMatch(rod, [0, 0, 0.5], [foot])
-    expect(match).not.toBeNull()
-    expect(match!.otherId).toBe('f1')
-    expect(match!.movingPointIndex).toBe(1) // rod's far end, local z=+5
-    expect(match!.otherPointIndex).toBe(0) // foot's only point
-  })
-
-  it('excludes points already claimed by an existing connection', () => {
-    const rod: ComponentInstance = {
-      id: 'r1',
-      componentDefinitionId: 'test_rod',
-      position: [0, 0, 0],
-      rotation: [0, 0, 0],
-      dimensions: { diameter: 1, length: 10 },
-      material: '#000',
-    }
-    const foot: ComponentInstance = {
-      id: 'f1',
-      componentDefinitionId: 'test_foot',
-      position: [0, 0, 6],
-      rotation: [0, 0, 0],
-      dimensions: { thickness: 1, width: 1, length: 1 },
-      material: '#000',
-    }
-    const match = findClosestConnectionMatch(rod, [0, 0, 0.5], [foot], [
-      { pieceId: 'f1', pointIndex: 0 },
-    ])
+    const match = findClosestConnectionMatch(rod, [0, 0, 0.5], [foot], [{ pieceId: 'f1', anchorIndex: 0 }])
     expect(match).toBeNull()
   })
 
-  it('excludes the moving piece\'s own point when already claimed', () => {
+  it('excludes the moving piece\'s own anchor when already claimed', () => {
     const rod: ComponentInstance = {
       id: 'r1',
       componentDefinitionId: 'test_rod',
@@ -223,9 +331,7 @@ describe('findClosestConnectionMatch', () => {
       dimensions: { thickness: 1, width: 1, length: 1 },
       material: '#000',
     }
-    const match = findClosestConnectionMatch(rod, [0, 0, 0.5], [foot], [
-      { pieceId: 'r1', pointIndex: 1 },
-    ])
+    const match = findClosestConnectionMatch(rod, [0, 0, 0.5], [foot], [{ pieceId: 'r1', anchorIndex: 1 }])
     expect(match).toBeNull()
   })
 })
