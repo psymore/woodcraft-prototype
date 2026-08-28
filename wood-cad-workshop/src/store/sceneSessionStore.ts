@@ -2,7 +2,7 @@ import { create } from 'zustand'
 // Note: this store is app state, not `engine/core` — the "no three import"
 // purity constraint applies only to `engine/core/*`.
 import * as THREE from 'three'
-import type { ComponentDefinition, ComponentInstance, Connection, Dimensions } from '../engine'
+import type { ComponentDefinition, ComponentInstance, Connection, ConnectionCandidate, Dimensions } from '../engine'
 import {
   createInstance,
   createPullupKitInstances,
@@ -10,6 +10,7 @@ import {
   findClosestConnectionMatch,
   getComponent,
   getConnectedPieceIds,
+  isConnectionCoincident,
   pruneStaleConnections,
   SNAP_DISTANCE,
 } from '../engine'
@@ -28,6 +29,8 @@ interface SceneSessionState {
   addComponent: (definition: ComponentDefinition) => void
   addPullupKit: () => void
   movePiece: (id: string, position: [number, number, number]) => void
+  confirmConnection: (candidate: ConnectionCandidate) => void
+  detachConnection: (connectionId: string) => void
   setRotation: (id: string, rotation: [number, number, number]) => void
   rotateSelected: () => void
   standSelectedUp: () => void
@@ -130,26 +133,41 @@ export function createSceneSessionStore() {
         // will always still measure as coincident here — this pass is a
         // defensive check, not the mechanism that decides group
         // membership.
-        let nextConnections = pruneStaleConnections(instancesAtFinal, state.connections, SNAP_DISTANCE)
-
-        if (match) {
-          nextConnections = [
-            ...nextConnections,
-            {
-              id: `conn-${id}-${match.otherId}-${match.movingPointIndex}-${match.otherPointIndex}`,
-              pieceAId: id,
-              pieceBId: match.otherId,
-              pointAIndex: match.movingPointIndex,
-              pointBIndex: match.otherPointIndex,
-            },
-          ]
-        }
+        const nextConnections = pruneStaleConnections(instancesAtFinal, state.connections, SNAP_DISTANCE)
 
         return {
           instances: instancesAtFinal,
           connections: nextConnections,
         }
       }),
+
+    // Persists a candidate found by findConnectionCandidates. Re-validates
+    // coincidence at click time (SNAP_DISTANCE, same threshold the
+    // candidate was found with) in case something else moved a piece
+    // between the candidate being rendered and the click landing — if the
+    // candidate has gone stale, this silently no-ops rather than
+    // persisting a connection whose points aren't actually touching.
+    confirmConnection: (candidate) =>
+      set((state) => {
+        const pieceA = state.instances.find((i) => i.id === candidate.pieceAId)
+        const pieceB = state.instances.find((i) => i.id === candidate.pieceBId)
+        if (!pieceA || !pieceB) return state
+        if (!isConnectionCoincident(candidate, state.instances, SNAP_DISTANCE)) return state
+        return {
+          connections: [
+            ...state.connections,
+            {
+              id: `conn-${candidate.pieceAId}-${candidate.pieceBId}-${candidate.pointAIndex}-${candidate.pointBIndex}`,
+              ...candidate,
+            },
+          ],
+        }
+      }),
+
+    detachConnection: (connectionId) =>
+      set((state) => ({
+        connections: state.connections.filter((c) => c.id !== connectionId),
+      })),
 
     setRotation: (id, rotation) =>
       set((state) => {
