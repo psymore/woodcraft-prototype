@@ -1,6 +1,6 @@
 # Connected-Piece Rigid Group Movement
 
-Status: approved, implementation pending.
+Status: implemented.
 
 ## Context
 
@@ -76,18 +76,41 @@ final `instances` map is built:
    This is the *real* displacement including any snap correction, not the
    raw proposed position — so a group rides along exactly as far as the
    dragged piece itself actually moved.
-2. Call `getConnectedPieceIds(id, survivingConnections)` (the
-   already-pruned connection list from the existing pre-snap step) to get
-   the rigid move set. For every instance in that set other than `id`
-   itself, add `delta` to its stored position unchanged. `id` itself gets
-   `finalPosition` directly, as today.
+2. Call `getConnectedPieceIds(id, state.connections)` — the *current*,
+   pre-move connection topology, not a distance-filtered intermediate
+   snapshot — to get the rigid move set. For every instance in that set
+   other than `id` itself, add `delta` to its stored position unchanged.
+   `id` itself gets `finalPosition` directly, as today.
+
+   An earlier version derived group membership from a position-filtered
+   snapshot taken before any group member had moved; any drag delta larger
+   than `SNAP_DISTANCE` could then spuriously exclude a genuinely connected
+   piece from the move (found and fixed during implementation review).
+   Deriving membership from the raw connection graph instead is correct
+   because a uniform translation can never change two connected pieces'
+   relative distance — group membership doesn't depend on current
+   proximity, only on connection topology.
+
+   The new-connection search (`findClosestConnectionMatch`) also excludes
+   every one of the dragged piece's own group members from its candidate
+   list, not just the dragged piece itself. Without this, a drag that
+   brings two already-connected-via-the-group pieces' free ends near each
+   other (e.g. closing a loop) would try to form a spurious new connection
+   between them at their stale pre-move positions — a rigid translation
+   can never change a group member's distance to another group member, so
+   such a match could never be a legitimate new connection anyway.
 
 Because every group member receives the *same* delta, their relative
 offsets — and therefore their existing connections to each other — are
-preserved exactly; the post-move `pruneStaleConnections` pass (unchanged)
-naturally keeps those internal connections intact and only prunes ones
-that genuinely go out of range (e.g. a connection to a piece *outside*
-the moving group that the group has now moved away from).
+preserved exactly. The post-move `pruneStaleConnections` pass (unchanged)
+is consequently a defensive/invariant check here, not the mechanism that
+decides group membership: every group-internal connection is
+translation-invariant by construction (both endpoints moved by the
+identical delta), so in practice this pass never removes anything for a
+pure translation. (A connection to a piece genuinely outside the moving
+group is impossible by definition — connected components are closed under
+the connection relation, so any piece connected to a group member is
+already a member of that group.)
 
 This applies uniformly to every caller of `movePiece` — both the body
 drag handler and the vertical-move handle in `Piece.tsx` — with no
@@ -99,10 +122,20 @@ special-casing, since both already funnel through this one action.
 `connections.test.ts`: a simple two-piece chain, a longer A-B-C-D chain
 (confirming transitivity), a branching case (one piece connected to two
 others), and a cycle (confirming it terminates and returns the correct
-set, not an infinite loop). `movePiece`'s new group-translation step is
-store orchestration — left untested per this project's established
-convention (every prior step in this initiative follows the same rule:
-pure `engine/core` functions get tests, Zustand store actions do not).
+set, not an infinite loop).
+
+`movePiece`'s new group-translation step is store orchestration, which
+this project's established convention normally leaves untested (pure
+`engine/core` functions get tests, Zustand store actions do not). This
+step is a scoped exception: it produced two distinct bugs during
+development (a stranded-neighbor bug from deriving group membership off a
+stale snapshot, and the near-closed-loop stale-position self-match
+described above) in the same ~15 lines, so `store/sceneSessionStore.test.ts`
+covers it directly via `createSceneSessionStore()` — a connected pair
+moving together with their connection intact, the near-closed-loop case
+forming no spurious connection and preserving group offsets exactly, and
+an unconnected piece's drag leaving every other instance
+reference-identical.
 
 ## Manual verification (user, after implementation)
 
@@ -122,3 +155,7 @@ pure `engine/core` functions get tests, Zustand store actions do not).
    moved together.
 6. Use the vertical-move handle (not just horizontal drag) on a connected
    piece — its connected assembly should rise/fall with it too.
+7. Build a near-closed loop (e.g. four boards forming a rectangle, three
+   joints connected) and drag one board to bring the last two free ends
+   together — the loop should close cleanly with a real new connection,
+   not a stray gap-holding connection at the old positions.

@@ -52,8 +52,8 @@ export function getConnectedPieceIds(pieceId: string, connections: Connection[])
   const visited = new Set<string>([pieceId])
   const queue = [pieceId]
 
-  while (queue.length > 0) {
-    const current = queue.shift() as string
+  for (let head = 0; head < queue.length; head++) {
+    const current = queue[head]
     for (const c of connections) {
       let neighbor: string | null = null
       if (c.pieceAId === current) neighbor = c.pieceBId

@@ -86,7 +86,18 @@ export function createSceneSessionStore() {
           { pieceId: c.pieceAId, pointIndex: c.pointAIndex },
           { pieceId: c.pieceBId, pointIndex: c.pointBIndex },
         ])
-        const match = findClosestConnectionMatch(moving, position, state.instances, excludePoints)
+        // A rigid translation can never change any two group members'
+        // relative distance, so searching the dragged piece's own group for
+        // a NEW connection can never legitimately succeed — the only thing
+        // it can do is match against a group member's stale pre-move
+        // position (see the near-closed-loop bug this guards against).
+        // Excluding the whole group leaves candidates outside it unaffected.
+        const match = findClosestConnectionMatch(
+          moving,
+          position,
+          state.instances.filter((i) => !groupIds.has(i.id)),
+          excludePoints,
+        )
         const finalPosition: [number, number, number] = match
           ? [position[0] + match.delta[0], position[1] + match.delta[1], position[2] + match.delta[2]]
           : position
