@@ -2,6 +2,8 @@ export type ComponentCategory = 'WOOD' | 'HARDWARE' | 'FASTENER'
 
 export type GeometryDescriptor = { shape: 'box' } | { shape: 'cylinder' }
 
+export type Vec3 = [number, number, number]
+
 export type Dimensions = Record<string, number>
 
 // 'ends': two attach points at the piece's local Z extremes (rods, beams,
