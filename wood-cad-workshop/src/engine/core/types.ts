@@ -37,10 +37,19 @@ export interface ComponentInstance {
   material: string
 }
 
+export interface AnchorRef {
+  anchorIndex: number
+  // Present only when the referenced anchor is 'segment' or 'face' — a
+  // material, piece-relative coordinate locked in once at confirm time,
+  // never re-derived as "wherever is currently closest." See
+  // connectionPoints.ts's AnchorParam/AnchorMatch.
+  param?: { t: number } | { u: number; v: number }
+}
+
 export interface Connection {
   id: string
   pieceAId: string
   pieceBId: string
-  pointAIndex: number // index into getConnectionPoints(pieceA)
-  pointBIndex: number // index into getConnectionPoints(pieceB)
+  a: AnchorRef // anchor on pieceA — index into getAnchors(pieceA)
+  b: AnchorRef // anchor on pieceB — index into getAnchors(pieceB)
 }
