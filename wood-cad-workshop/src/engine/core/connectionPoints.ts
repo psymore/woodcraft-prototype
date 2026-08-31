@@ -20,15 +20,22 @@ export type WorldAnchor = AnchorPrimitive
 // Box 'ends' pieces (board, squareBeam, verticalPost — decided
 // structurally by geometry.shape === 'box', not a hardcoded component
 // list) get, in order: the 2 existing end points (indices 0/1,
-// unchanged); 2 discrete edge-center points (indices 2/3) — needed
-// because segment-segment matching isn't supported this increment, so
-// two boards' edges can only glue via a point-vs-point or point-vs-segment
+// unchanged); 2 new discrete edge-center points (indices 2/3 — new to
+// this branch, not a pre-existing carryover) — needed because
+// segment-segment matching isn't supported this increment, so two
+// boards' edges can only glue via a point-vs-point or point-vs-segment
 // path, and every box piece needs to offer a point at its own edge
-// center for that to work symmetrically; 2 edge segment anchors (indices
-// 4/5, the same two edges as indices 2/3, but spanning their full length)
-// — for a piece's end touching that edge off-center; 4 face anchors
-// (indices 6-9, all four side faces) — for a piece's end touching
-// anywhere on a wide or narrow face.
+// center for that to work symmetrically; 2 segment anchors (indices
+// 4/5) — despite the "edge" framing elsewhere, these are NOT true box
+// edges (a true edge is where two faces meet, e.g. x=±hx AND y=±hy
+// simultaneously); each instead runs down the centerline of its sibling
+// face anchor at the same y (x=0, the thickness midpoint), so it's
+// geometrically dominated by that face and rarely wins a match — a
+// known limitation, deferred to a follow-up plan; 4 face anchors
+// (indices 6-9, all four side faces): indices 6/7 are normal to the
+// Y/width axis (center: [0, ±hy, 0]) and measure thickness × length —
+// the narrow faces; indices 8/9 are normal to the X/thickness axis
+// (center: [±hx, 0, 0]) and measure width × length — the wide faces.
 export function getAnchors(instance: ComponentInstance): AnchorPrimitive[] {
   const definition = getComponent(instance.componentDefinitionId)
   const { length } = instance.dimensions

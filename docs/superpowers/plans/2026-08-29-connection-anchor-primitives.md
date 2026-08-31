@@ -33,7 +33,7 @@
 - Consumes: nothing from other tasks.
 - Produces: `export type Vec3 = [number, number, number]` (types.ts); `export function distance(a: Vec3, b: Vec3): number`, `export function closestPointOnSegment(p: Vec3, a: Vec3, b: Vec3): { point: Vec3; t: number }`, `export function closestPointOnRect(p: Vec3, center: Vec3, uAxis: Vec3, vAxis: Vec3, halfU: number, halfV: number): { point: Vec3; u: number; v: number }` (geometry.ts) — for Task 2 to consume.
 
-- [ ] **Step 1: Add `Vec3` to types.ts**
+- [x] **Step 1: Add `Vec3` to types.ts**
 
 In `wood-cad-workshop/src/engine/core/types.ts`, add near the top (after the existing `ComponentCategory`/`GeometryDescriptor` type aliases):
 
@@ -41,7 +41,7 @@ In `wood-cad-workshop/src/engine/core/types.ts`, add near the top (after the exi
 export type Vec3 = [number, number, number]
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 Create `wood-cad-workshop/src/engine/core/geometry.test.ts`:
 
@@ -113,12 +113,12 @@ describe('closestPointOnRect', () => {
 })
 ```
 
-- [ ] **Step 3: Run tests to verify they fail**
+- [x] **Step 3: Run tests to verify they fail**
 
 Run: `cd wood-cad-workshop && npx vitest run src/engine/core/geometry.test.ts`
 Expected: FAIL — `./geometry` module not found.
 
-- [ ] **Step 4: Implement `geometry.ts`**
+- [x] **Step 4: Implement `geometry.ts`**
 
 Create `wood-cad-workshop/src/engine/core/geometry.ts`:
 
@@ -183,17 +183,17 @@ export function closestPointOnRect(
 }
 ```
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: `cd wood-cad-workshop && npx vitest run src/engine/core/geometry.test.ts`
 Expected: PASS, all 8 cases.
 
-- [ ] **Step 6: Run the full check (tsc + full test suite)**
+- [x] **Step 6: Run the full check (tsc + full test suite)**
 
 Run: `cd wood-cad-workshop && npx tsc -b && npx vitest run`
 Expected: PASS, no type errors, all existing tests still green (this task only adds files, doesn't touch existing ones).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add wood-cad-workshop/src/engine/core/types.ts wood-cad-workshop/src/engine/core/geometry.ts wood-cad-workshop/src/engine/core/geometry.test.ts
@@ -214,7 +214,7 @@ git commit -m "feat: add closest-point geometry primitives (segment, rect)"
 
 This task fully replaces `connectionPoints.ts`'s old point-only API (`getConnectionPoints`, `toWorldPoint`, `findConnectionSnapDelta` — the last one was already dead code, unused outside its own tests, per a repo-wide grep confirming no other file imports it). `SNAP_DISTANCE` stays exactly as-is (still `0.7`, still exported from this file).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Replace the full contents of `wood-cad-workshop/src/engine/core/connectionPoints.test.ts` with:
 
@@ -558,12 +558,12 @@ describe('findClosestConnectionMatch', () => {
 })
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd wood-cad-workshop && npx vitest run src/engine/core/connectionPoints.test.ts`
 Expected: FAIL — `getAnchors`, `toWorldAnchor`, `closestBetweenWorldAnchors` not exported / not defined.
 
-- [ ] **Step 3: Implement the full rewrite of `connectionPoints.ts`**
+- [x] **Step 3: Implement the full rewrite of `connectionPoints.ts`**
 
 Replace the full contents of `wood-cad-workshop/src/engine/core/connectionPoints.ts` with:
 
@@ -836,17 +836,17 @@ export function findClosestConnectionMatch(
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `cd wood-cad-workshop && npx vitest run src/engine/core/connectionPoints.test.ts`
 Expected: PASS, all cases.
 
-- [ ] **Step 5: Run the full check (tsc + full test suite)**
+- [x] **Step 5: Run the full check (tsc + full test suite)**
 
 Run: `cd wood-cad-workshop && npx tsc -b && npx vitest run`
 Expected: FAIL at this point — `connections.ts`, `sceneSessionStore.ts`, and `ConnectionMarkers.tsx` still import the now-removed `getConnectionPoints`/`toWorldPoint` from this file. This is expected; Tasks 3-5 fix each of those files in turn. Confirm the ONLY failures are TypeScript errors in those three files (missing export errors), not anything inside `connectionPoints.ts`/`connectionPoints.test.ts`/`geometry.ts` themselves.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add wood-cad-workshop/src/engine/core/connectionPoints.ts wood-cad-workshop/src/engine/core/connectionPoints.test.ts
@@ -868,7 +868,7 @@ git commit -m "feat: generalize connection anchors from points to point/segment/
 
 `getConnectedPieceIds` is untouched — it only ever reads `pieceAId`/`pieceBId` off a `Connection`, never anchor geometry, so it needs no changes at all (copy it forward verbatim from the current file).
 
-- [ ] **Step 1: Update `types.ts`**
+- [x] **Step 1: Update `types.ts`**
 
 In `wood-cad-workshop/src/engine/core/types.ts`, replace:
 
@@ -903,7 +903,7 @@ export interface Connection {
 }
 ```
 
-- [ ] **Step 2: Write the failing tests**
+- [x] **Step 2: Write the failing tests**
 
 Replace the full contents of `wood-cad-workshop/src/engine/core/connections.test.ts` with:
 
@@ -1300,12 +1300,12 @@ describe('findConnectionCandidates', () => {
 })
 ```
 
-- [ ] **Step 3: Run tests to verify they fail**
+- [x] **Step 3: Run tests to verify they fail**
 
 Run: `cd wood-cad-workshop && npx vitest run src/engine/core/connections.test.ts`
 Expected: FAIL — `isAnchorClaimable` not exported, and `Connection` literals using `a`/`b` fail against the OLD `connections.ts` (still expects `pointAIndex`/`pointBIndex` at this point since Step 1 already changed `types.ts`, but `connections.ts` hasn't been rewritten yet — this will be a TypeScript compile error, not a runtime assertion failure, which is the expected "fails for the right reason" state before Step 4).
 
-- [ ] **Step 4: Implement the full rewrite of `connections.ts`**
+- [x] **Step 4: Implement the full rewrite of `connections.ts`**
 
 Replace the full contents of `wood-cad-workshop/src/engine/core/connections.ts` with:
 
@@ -1486,17 +1486,17 @@ export function findConnectionCandidates(
 }
 ```
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: `cd wood-cad-workshop && npx vitest run src/engine/core/connections.test.ts`
 Expected: PASS, all cases.
 
-- [ ] **Step 6: Run the full check (tsc + full test suite)**
+- [x] **Step 6: Run the full check (tsc + full test suite)**
 
 Run: `cd wood-cad-workshop && npx tsc -b && npx vitest run`
 Expected: FAIL at this point — `sceneSessionStore.ts` and `ConnectionMarkers.tsx` still reference the old `Connection.pointAIndex`/`pointBIndex` fields and the old `getConnectionPoints`/`toWorldPoint` exports. Confirm the only failures are TypeScript errors in those two files; Tasks 4-5 fix them.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add wood-cad-workshop/src/engine/core/types.ts wood-cad-workshop/src/engine/core/connections.ts wood-cad-workshop/src/engine/core/connections.test.ts
@@ -1517,7 +1517,7 @@ git commit -m "feat: move Connection/ConnectionCandidate to AnchorRef, add multi
 
 This task is store orchestration — per this project's established convention, left untested beyond keeping the existing `sceneSessionStore.test.ts` suite green (updating its `Connection` literal fixtures to the new `a`/`b: AnchorRef` shape, since those are currently written against the removed `pointAIndex`/`pointBIndex` fields and won't compile otherwise).
 
-- [ ] **Step 1: Update imports**
+- [x] **Step 1: Update imports**
 
 In `wood-cad-workshop/src/store/sceneSessionStore.ts`, replace:
 
@@ -1560,7 +1560,7 @@ import {
 
 (`isConnectionCoincident` is dropped from this file's imports — the rewritten `confirmConnection` below calls `closestBetweenWorldAnchors` directly instead, and nothing else in this file used `isConnectionCoincident`. Leaving it imported but unused would fail `tsc -b` if the project's strict settings flag unused imports.)
 
-- [ ] **Step 2: Update `movePiece`'s exclude-list construction**
+- [x] **Step 2: Update `movePiece`'s exclude-list construction**
 
 Replace:
 
@@ -1603,7 +1603,7 @@ Then, a few lines below, replace the `findClosestConnectionMatch` call's last ar
         )
 ```
 
-- [ ] **Step 3: Rewrite `confirmConnection`**
+- [x] **Step 3: Rewrite `confirmConnection`**
 
 Replace the entire `confirmConnection` action (from its leading comment through its closing `}),`) with:
 
@@ -1688,7 +1688,7 @@ Replace the entire `confirmConnection` action (from its leading comment through 
 
 `detachConnection` is unchanged — leave it exactly as-is.
 
-- [ ] **Step 4: Update `sceneSessionStore.test.ts`'s `Connection` fixtures**
+- [x] **Step 4: Update `sceneSessionStore.test.ts`'s `Connection` fixtures**
 
 Its two `movePiece — group translation` tests each construct `Connection` literals. Replace:
 
@@ -1718,12 +1718,12 @@ with:
 
 No other changes to this file — every other assertion (positions, connection counts, reference identity) is unaffected, since these tests use `rodDefinition()` (a cylinder, unaffected by the anchor-primitive change) and never assert on `pointAIndex`/`pointBIndex`/`a`/`b` values directly, only on connection *counts* and *membership*.
 
-- [ ] **Step 5: Run the full check (tsc + full test suite)**
+- [x] **Step 5: Run the full check (tsc + full test suite)**
 
 Run: `cd wood-cad-workshop && npx tsc -b && npx vitest run`
 Expected: FAIL only in `ConnectionMarkers.tsx` (Task 5 fixes it) — confirm `sceneSessionStore.ts` and `sceneSessionStore.test.ts` themselves compile clean and all `sceneSessionStore.test.ts` tests pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add wood-cad-workshop/src/store/sceneSessionStore.ts wood-cad-workshop/src/store/sceneSessionStore.test.ts
@@ -1743,7 +1743,7 @@ git commit -m "feat: wire movePiece/confirmConnection to anchor-based matching"
 
 This is UI/rendering code — per this project's established convention (matching every other `scene/*.tsx` component), left untested. Verify via `tsc` + manual smoke test, deferred per the batched manual-verification note already established this session.
 
-- [ ] **Step 1: Replace `ConnectionMarkers.tsx`'s contents**
+- [x] **Step 1: Replace `ConnectionMarkers.tsx`'s contents**
 
 Replace the full contents of `wood-cad-workshop/src/scene/ConnectionMarkers.tsx` with:
 
@@ -1864,12 +1864,12 @@ export function ConnectionMarkers() {
 }
 ```
 
-- [ ] **Step 2: Run the full check (tsc + full test suite)**
+- [x] **Step 2: Run the full check (tsc + full test suite)**
 
 Run: `cd wood-cad-workshop && npx tsc -b && npx vitest run`
 Expected: PASS, no type errors, all tests green — this is the first point in this plan where the whole project compiles clean end-to-end.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add wood-cad-workshop/src/scene/ConnectionMarkers.tsx

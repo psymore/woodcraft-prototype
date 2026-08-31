@@ -5,8 +5,8 @@ import type { ComponentDefinition, ComponentInstance, Connection } from '../engi
 import { createSceneSessionStore } from './sceneSessionStore'
 
 // Same fixture shape as engine/core/connections.test.ts's rodDefinition():
-// an 'ends'-role piece of length 10, so getConnectionPoints returns local
-// points at z=-5 (index 0) and z=+5 (index 1).
+// an 'ends'-role piece of length 10, so getAnchors (engine/core/connectionPoints.ts)
+// returns local points at z=-5 (index 0) and z=+5 (index 1).
 function rodDefinition(): ComponentDefinition {
   return {
     id: 'test_rod',
