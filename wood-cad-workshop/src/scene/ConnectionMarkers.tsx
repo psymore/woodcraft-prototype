@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
-import { findConnectionCandidates, getConnectionPoints, SNAP_DISTANCE, toWorldPoint } from '../engine'
+import { closestBetweenWorldAnchors, findConnectionCandidates, getAnchors, SNAP_DISTANCE, toWorldAnchor } from '../engine'
 import type { ConnectionCandidate } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
 
@@ -18,7 +18,7 @@ const CONNECTED_COLOR = '#d9342b'
 const DETACH_COOLDOWN_MS = 400
 
 // One marker per active Connection, plus one per not-yet-confirmed
-// candidate (two unclaimed, compatible points within SNAP_DISTANCE of
+// candidate (two available, compatible anchors within SNAP_DISTANCE of
 // each other) — both hidden during exploded view, same as the rotation
 // gizmo and vertical-move handle in Piece.tsx.
 export function ConnectionMarkers() {
@@ -31,21 +31,30 @@ export function ConnectionMarkers() {
 
   if (explodeAmount > 0) return null
 
+  // Midpoint of the two anchors' closest-approach points — degenerates
+  // to the exact midpoint of two fixed points for a point-point pair
+  // (unchanged from before this change), and lands on the true
+  // closest-approach location for a segment/face pair.
   const midpointOf = (
     pieceAId: string,
-    pointAIndex: number,
+    aAnchorIndex: number,
     pieceBId: string,
-    pointBIndex: number,
+    bAnchorIndex: number,
   ): [number, number, number] | null => {
     const pieceA = instances.find((i) => i.id === pieceAId)
     const pieceB = instances.find((i) => i.id === pieceBId)
     if (!pieceA || !pieceB) return null
-    const localA = getConnectionPoints(pieceA)[pointAIndex]
-    const localB = getConnectionPoints(pieceB)[pointBIndex]
-    if (!localA || !localB) return null
-    const worldA = toWorldPoint(pieceA, localA)
-    const worldB = toWorldPoint(pieceB, localB)
-    return [(worldA[0] + worldB[0]) / 2, (worldA[1] + worldB[1]) / 2, (worldA[2] + worldB[2]) / 2]
+    const anchorA = getAnchors(pieceA)[aAnchorIndex]
+    const anchorB = getAnchors(pieceB)[bAnchorIndex]
+    if (!anchorA || !anchorB) return null
+    const worldA = toWorldAnchor(pieceA, anchorA)
+    const worldB = toWorldAnchor(pieceB, anchorB)
+    const match = closestBetweenWorldAnchors(worldA, worldB)
+    return [
+      (match.pointA[0] + match.pointB[0]) / 2,
+      (match.pointA[1] + match.pointB[1]) / 2,
+      (match.pointA[2] + match.pointB[2]) / 2,
+    ]
   }
 
   // Stops the click/pointerdown from also reaching Scene.tsx's ground
@@ -56,12 +65,12 @@ export function ConnectionMarkers() {
   const candidates = findConnectionCandidates(instances, connections, SNAP_DISTANCE)
 
   const candidateKey = (c: ConnectionCandidate) =>
-    `candidate-${c.pieceAId}-${c.pointAIndex}-${c.pieceBId}-${c.pointBIndex}`
+    `candidate-${c.pieceAId}-${c.a.anchorIndex}-${c.pieceBId}-${c.b.anchorIndex}`
 
   return (
     <>
       {candidates.map((candidate) => {
-        const midpoint = midpointOf(candidate.pieceAId, candidate.pointAIndex, candidate.pieceBId, candidate.pointBIndex)
+        const midpoint = midpointOf(candidate.pieceAId, candidate.a.anchorIndex, candidate.pieceBId, candidate.b.anchorIndex)
         if (!midpoint) return null
         return (
           <mesh
@@ -70,7 +79,7 @@ export function ConnectionMarkers() {
             onPointerDown={stop}
             onClick={(e: ThreeEvent<MouseEvent>) => {
               stop(e)
-              const connectionId = `conn-${candidate.pieceAId}-${candidate.pieceBId}-${candidate.pointAIndex}-${candidate.pointBIndex}`
+              const connectionId = `conn-${candidate.pieceAId}-${candidate.pieceBId}-${candidate.a.anchorIndex}-${candidate.b.anchorIndex}`
               justConfirmedAt.current.set(connectionId, Date.now())
               confirmConnection(candidate)
             }}
@@ -81,7 +90,7 @@ export function ConnectionMarkers() {
         )
       })}
       {connections.map((connection) => {
-        const midpoint = midpointOf(connection.pieceAId, connection.pointAIndex, connection.pieceBId, connection.pointBIndex)
+        const midpoint = midpointOf(connection.pieceAId, connection.a.anchorIndex, connection.pieceBId, connection.b.anchorIndex)
         if (!midpoint) return null
         return (
           <mesh
