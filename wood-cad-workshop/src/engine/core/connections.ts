@@ -1,4 +1,4 @@
-import type { AnchorRef, ComponentInstance, Connection } from './types'
+import type { AnchorRef, ComponentInstance, Connection, Vec3 } from './types'
 import { getAnchors, toWorldAnchor, closestBetweenWorldAnchors, pointAtParam } from './connectionPoints'
 
 // The 4 fields both a persisted Connection and an unconfirmed
@@ -171,4 +171,35 @@ export function findConnectionCandidates(
   }
 
   return candidates
+}
+
+const PIN_DIRECTION_EPSILON = 0.01
+
+// Direction a confirmed connection's visual "pin" (see
+// ConnectionMarkers.tsx) points, away from the joint into open air. The
+// two anchor points of a confirmed Connection are coincident by
+// construction (confirmConnection closes any gap exactly), so there's no
+// meaningful line to draw between them — the pin instead extends a fixed
+// length from that single joint point, in this direction.
+//
+// Primary heuristic: point away from the average of both connected
+// pieces' own positions. Falls back to world-up when that's degenerate
+// (near-zero) — which happens for a straight coaxial end-to-end join,
+// where both piece centers and the joint sit collinear at the same
+// height. A direction ALONG that shared axis would point straight into
+// whichever piece sits on that side, not into open air, so world-up (
+// perpendicular to a flat-lying join) is used instead of a
+// piece-position-based fallback there. Derived entirely from the actual
+// piece/joint positions — never a hardcoded world axis except in that
+// one fallback case.
+export function pinDirection(joint: Vec3, pieceA: ComponentInstance, pieceB: ComponentInstance): Vec3 {
+  const avgCenter: Vec3 = [
+    (pieceA.position[0] + pieceB.position[0]) / 2,
+    (pieceA.position[1] + pieceB.position[1]) / 2,
+    (pieceA.position[2] + pieceB.position[2]) / 2,
+  ]
+  const d: Vec3 = [joint[0] - avgCenter[0], joint[1] - avgCenter[1], joint[2] - avgCenter[2]]
+  const len = Math.sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2])
+  if (len < PIN_DIRECTION_EPSILON) return [0, 1, 0]
+  return [d[0] / len, d[1] / len, d[2] / len]
 }

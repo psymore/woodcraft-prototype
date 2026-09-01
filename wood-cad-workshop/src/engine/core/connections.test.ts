@@ -6,8 +6,9 @@ import {
   getConnectedPieceIds,
   findConnectionCandidates,
   isAnchorClaimable,
+  pinDirection,
 } from './connections'
-import type { ComponentDefinition, ComponentInstance, Connection } from './types'
+import type { ComponentDefinition, ComponentInstance, Connection, Vec3 } from './types'
 
 function rodDefinition(): ComponentDefinition {
   return {
@@ -386,5 +387,68 @@ describe('findConnectionCandidates', () => {
     }
     const result = findConnectionCandidates([board, rodA, rodB], [existing], 0.7)
     expect(result.some((c) => c.pieceAId === 'rb' || c.pieceBId === 'rb')).toBe(true)
+  })
+})
+
+describe('pinDirection', () => {
+  it('points from the joint away from the average of both piece centers', () => {
+    const pieceA: ComponentInstance = {
+      id: 'a', componentDefinitionId: 'test_board', position: [0, 1.75, 0], rotation: [0, 0, 0],
+      dimensions: { thickness: 1.5, width: 3.5, length: 10 }, material: '#000',
+    }
+    const pieceB: ComponentInstance = {
+      id: 'b', componentDefinitionId: 'test_rod', position: [0, 6.75, 5], rotation: [Math.PI / 2, 0, 0],
+      dimensions: { thickness: 3.5, width: 3.5, length: 10 }, material: '#000',
+    }
+    // avgCenter = (0, 4.25, 2.5); joint - avgCenter = (0, -2.5, 2.5),
+    // which normalizes to (0, -1/sqrt(2), 1/sqrt(2)).
+    const joint: Vec3 = [0, 1.75, 5]
+    const dir = pinDirection(joint, pieceA, pieceB)
+    expect(dir[0]).toBeCloseTo(0)
+    expect(dir[1]).toBeCloseTo(-Math.SQRT1_2)
+    expect(dir[2]).toBeCloseTo(Math.SQRT1_2)
+  })
+
+  it('always returns a unit vector', () => {
+    const pieceA: ComponentInstance = {
+      id: 'a', componentDefinitionId: 'test_board', position: [1, 2, 3], rotation: [0, 0, 0],
+      dimensions: { thickness: 1.5, width: 3.5, length: 10 }, material: '#000',
+    }
+    const pieceB: ComponentInstance = {
+      id: 'b', componentDefinitionId: 'test_board', position: [4, -2, 7], rotation: [0, 0, 0],
+      dimensions: { thickness: 1.5, width: 3.5, length: 10 }, material: '#000',
+    }
+    const dir = pinDirection([2, 1, 4], pieceA, pieceB)
+    const len = Math.sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2])
+    expect(len).toBeCloseTo(1)
+  })
+
+  it('falls back to world-up when the joint coincides with the average of both piece centers (straight coaxial join)', () => {
+    // Two boards end to end along Z, same height, touching at their
+    // shared midpoint z=5 — which is exactly the average of both
+    // centers, degenerating the primary heuristic to a zero vector.
+    const pieceA: ComponentInstance = {
+      id: 'a', componentDefinitionId: 'test_board', position: [0, 1.75, 0], rotation: [0, 0, 0],
+      dimensions: { thickness: 1.5, width: 3.5, length: 10 }, material: '#000',
+    }
+    const pieceB: ComponentInstance = {
+      id: 'b', componentDefinitionId: 'test_board', position: [0, 1.75, 10], rotation: [0, 0, 0],
+      dimensions: { thickness: 1.5, width: 3.5, length: 10 }, material: '#000',
+    }
+    const joint: Vec3 = [0, 1.75, 5]
+    expect(pinDirection(joint, pieceA, pieceB)).toEqual([0, 1, 0])
+  })
+
+  it('is symmetric under swapping pieceA and pieceB', () => {
+    const pieceA: ComponentInstance = {
+      id: 'a', componentDefinitionId: 'test_board', position: [0, 1.75, 0], rotation: [0, 0, 0],
+      dimensions: { thickness: 1.5, width: 3.5, length: 10 }, material: '#000',
+    }
+    const pieceB: ComponentInstance = {
+      id: 'b', componentDefinitionId: 'test_rod', position: [0, 6.75, 5], rotation: [Math.PI / 2, 0, 0],
+      dimensions: { thickness: 3.5, width: 3.5, length: 10 }, material: '#000',
+    }
+    const joint: Vec3 = [0, 1.75, 5]
+    expect(pinDirection(joint, pieceA, pieceB)).toEqual(pinDirection(joint, pieceB, pieceA))
   })
 })
