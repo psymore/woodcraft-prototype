@@ -41,6 +41,31 @@ work actually is). Isolation comes from the branch, not the directory.
 Merge/finish it the same way you would a worktree branch — this only
 changes where the work happens, not the git workflow around it.
 
+## Git workflow shorthand
+
+The user may invoke either of these verbally (bare, or e.g. "let's BCMP
+this"). They apply for any agent working from this file, not just Claude
+Code:
+
+- **CMP** — commit, merge, and push the **current** branch: commit
+  whatever's staged/pending, merge the current branch into its immediate
+  parent (fast-forward when possible), and push. No new branch is
+  created. Invoking CMP is standing authorization for the push step
+  specifically — no need to re-confirm before pushing when CMP is
+  invoked (other push situations still follow normal confirmation
+  norms).
+- **BCMP** — branch out first: create a conventionally-prefixed branch
+  (`feature/`, `refactor/`, `test/`, etc., matching whatever the changes
+  are) off the current branch, commit the pending changes there (split
+  into multiple logical commits when they cover distinct concerns,
+  matching this repo's one-purpose-per-commit style), merge that branch
+  back into the branch it was cut from, then push.
+
+Both still use judgment on: branch naming, what belongs in the diff
+(exclude local/generated artifacts — extend `.gitignore` rather than
+committing them), and commit granularity (infer style from
+`git log --oneline` when unsure).
+
 ## Status
 
 Prototype 0, the platform-decision touch spike, and the Wood CAD Workshop
