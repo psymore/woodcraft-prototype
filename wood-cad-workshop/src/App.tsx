@@ -8,8 +8,8 @@ import { MainMenu } from './ui/MainMenu'
 import { InventorySheet } from './ui/Inventory'
 import { Inspector } from './ui/Inspector'
 import { GizmoToggles } from './ui/GizmoToggles'
-import { getViewPreset, computeBounds } from './engine'
-import type { ViewName } from './engine'
+import { getViewPreset, computeInstanceBounds } from './engine'
+import type { ComponentInstance, ViewName } from './engine'
 import { useSceneSession } from './store/sceneSessionStore'
 
 function App() {
@@ -58,11 +58,11 @@ function App() {
     applyCameraState(preset.position, preset.up)
   }
 
-  const frame = (positions: Array<[number, number, number]>) => {
+  const frame = (pieces: ComponentInstance[]) => {
     const controls = controlsRef.current
     if (!controls) return
     const camera = controls.object as THREE.PerspectiveCamera
-    const { center, radius } = computeBounds(positions)
+    const { center, radius } = computeInstanceBounds(pieces)
     const distance = Math.max(radius * 2.5, 10)
     const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize()
     controls.target.set(...center)
@@ -71,10 +71,10 @@ function App() {
     controls.update()
   }
 
-  const handleFrameAll = () => frame(instances.map((i) => i.position))
+  const handleFrameAll = () => frame(instances)
   const handleFrameSelected = () => {
     const selected = instances.find((i) => i.id === selectedId)
-    if (selected) frame([selected.position])
+    if (selected) frame([selected])
   }
 
   // OrbitControls computes its internal up-alignment quaternion once, in its
@@ -105,6 +105,8 @@ function App() {
           makeDefault
           enabled={!isDraggingPiece}
           onStart={handleOrbitStart}
+          minDistance={1.5}
+          maxDistance={300}
         />
       </Canvas>
       <MainMenu
