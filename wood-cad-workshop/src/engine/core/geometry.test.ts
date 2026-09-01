@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { distance, closestPointOnSegment, closestPointOnRect } from './geometry'
+import { distance, closestPointOnSegment, closestPointOnRect, applyRotation } from './geometry'
 
 describe('distance', () => {
   it('computes straight-line 3D distance', () => {
@@ -61,5 +61,28 @@ describe('closestPointOnRect', () => {
     expect(result.point).toEqual([2, 0, 5])
     expect(result.u).toBe(2)
     expect(result.v).toBe(5)
+  })
+})
+
+describe('applyRotation', () => {
+  it('leaves a vector unchanged under zero rotation', () => {
+    const result = applyRotation([0, 0, 0], [1, 2, 3])
+    expect(result[0]).toBeCloseTo(1)
+    expect(result[1]).toBeCloseTo(2)
+    expect(result[2]).toBeCloseTo(3)
+  })
+
+  it('rotates a +Z vector to +X under a 90-degree yaw (Y-axis rotation)', () => {
+    const result = applyRotation([0, Math.PI / 2, 0], [0, 0, 1])
+    expect(result[0]).toBeCloseTo(1)
+    expect(result[1]).toBeCloseTo(0)
+    expect(result[2]).toBeCloseTo(0)
+  })
+
+  it('rotates a +Z vector to -Y under a 90-degree pitch (X-axis rotation)', () => {
+    const result = applyRotation([Math.PI / 2, 0, 0], [0, 0, 1])
+    expect(result[0]).toBeCloseTo(0)
+    expect(result[1]).toBeCloseTo(-1)
+    expect(result[2]).toBeCloseTo(0)
   })
 })

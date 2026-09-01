@@ -1,6 +1,6 @@
 import type { ComponentInstance, Vec3 } from './types'
 import { getComponent } from '../registry/registry'
-import { closestPointOnSegment, closestPointOnRect, distance } from './geometry'
+import { applyRotation, closestPointOnSegment, closestPointOnRect, distance } from './geometry'
 
 export const SNAP_DISTANCE = 0.7
 
@@ -68,34 +68,6 @@ export function getAnchors(instance: ComponentInstance): AnchorPrimitive[] {
     default:
       return []
   }
-}
-
-// Full 3-axis rotation matrix for three.js's default Euler order 'XYZ'
-// (matches THREE.Matrix4.makeRotationFromEuler exactly, so this stays in
-// sync with how Piece.tsx renders `instance.rotation`). Rotates a
-// direction vector only — no translation. Reduces to the previous
-// yaw-only formula when rx = rz = 0.
-function applyRotation(rotation: Vec3, local: Vec3): Vec3 {
-  const [rx, ry, rz] = rotation
-  const [lx, ly, lz] = local
-  const c1 = Math.cos(rx)
-  const s1 = Math.sin(rx)
-  const c2 = Math.cos(ry)
-  const s2 = Math.sin(ry)
-  const c3 = Math.cos(rz)
-  const s3 = Math.sin(rz)
-
-  const m11 = c2 * c3
-  const m12 = -c2 * s3
-  const m13 = s2
-  const m21 = c1 * s3 + s1 * s2 * c3
-  const m22 = c1 * c3 - s1 * s2 * s3
-  const m23 = -s1 * c2
-  const m31 = s1 * s3 - c1 * s2 * c3
-  const m32 = s1 * c3 + c1 * s2 * s3
-  const m33 = c1 * c2
-
-  return [m11 * lx + m12 * ly + m13 * lz, m21 * lx + m22 * ly + m23 * lz, m31 * lx + m32 * ly + m33 * lz]
 }
 
 function toWorldPoint(instance: ComponentInstance, local: Vec3): Vec3 {

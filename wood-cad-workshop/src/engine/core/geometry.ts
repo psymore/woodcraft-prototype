@@ -7,6 +7,35 @@ export function distance(a: Vec3, b: Vec3): number {
   return Math.sqrt(dx * dx + dy * dy + dz * dz)
 }
 
+// Full 3-axis rotation matrix for three.js's default Euler order 'XYZ'
+// (matches THREE.Matrix4.makeRotationFromEuler exactly, so this stays in
+// sync with how Piece.tsx renders `instance.rotation`). Rotates a
+// direction vector only — no translation. Reduces to a yaw-only formula
+// when rx = rz = 0. Shared by connectionPoints.ts (anchor transforms)
+// and framing.ts (camera bounding-box corners) so both stay in sync.
+export function applyRotation(rotation: Vec3, local: Vec3): Vec3 {
+  const [rx, ry, rz] = rotation
+  const [lx, ly, lz] = local
+  const c1 = Math.cos(rx)
+  const s1 = Math.sin(rx)
+  const c2 = Math.cos(ry)
+  const s2 = Math.sin(ry)
+  const c3 = Math.cos(rz)
+  const s3 = Math.sin(rz)
+
+  const m11 = c2 * c3
+  const m12 = -c2 * s3
+  const m13 = s2
+  const m21 = c1 * s3 + s1 * s2 * c3
+  const m22 = c1 * c3 - s1 * s2 * s3
+  const m23 = -s1 * c2
+  const m31 = s1 * s3 - c1 * s2 * c3
+  const m32 = s1 * c3 + c1 * s2 * s3
+  const m33 = c1 * c2
+
+  return [m11 * lx + m12 * ly + m13 * lz, m21 * lx + m22 * ly + m23 * lz, m31 * lx + m32 * ly + m33 * lz]
+}
+
 // Closest point on the finite segment [a, b] to p, via clamped
 // projection: project p onto the segment's direction, clamp the
 // parameter t to [0, 1]. Degenerate (zero-length) segments return `a`
