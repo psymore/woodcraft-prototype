@@ -18,7 +18,7 @@ function localHalfExtents(instance: ComponentInstance): Vec3 {
   const definition = getComponent(instance.componentDefinitionId)
   if (definition.geometry.shape === 'cylinder') {
     const { radius, height } = getCylinderSize(instance)
-    return [radius / 2, radius / 2, height / 4]
+    return [radius, radius, height / 2]
   }
   const [thickness, width, length] = getBoxSize(instance)
   return [thickness / 2, width / 2, length / 2]
@@ -63,23 +63,9 @@ export function computeInstanceBounds(instances: ComponentInstance[]): Bounds {
     (min[1] + max[1]) / 2,
     (min[2] + max[2]) / 2,
   ]
-  // Radius is half the diagonal of the AABB containing all corners
   const dx = max[0] - min[0]
   const dy = max[1] - min[1]
   const dz = max[2] - min[2]
-  let radius = Math.sqrt(dx * dx + dy * dy + dz * dz) / 2
-
-  // For rotated pieces, the radius calculation needs to account for the transformation
-  let hasRotation = false
-  for (const instance of instances) {
-    if (instance.rotation[0] !== 0 || instance.rotation[1] !== 0 || instance.rotation[2] !== 0) {
-      hasRotation = true
-      break
-    }
-  }
-  if (hasRotation) {
-    radius /= 2
-  }
-
+  const radius = Math.sqrt(dx * dx + dy * dy + dz * dz) / 2
   return { center, radius }
 }

@@ -73,27 +73,28 @@ describe('computeInstanceBounds', () => {
 
   it('accounts for rotation — a 45-degree yaw genuinely enlarges the bounding radius', () => {
     // thickness=2, width=2, length=10 -> half-extents [1,1,5]. Unrotated,
-    // half-diagonal = sqrt(1^2+1^2+5^2) = sqrt(27). A 45-degree yaw tilts
+    // half-diagonal = sqrt(1^2+1^2+5^2) = sqrt(27) ≈ 5.196. A 45-degree yaw tilts
     // the long axis partly into X, which — because the AABB must contain
-    // the tilted box — genuinely grows the bounding radius to sqrt(37)/2.
-    // A implementation that ignored rotation would incorrectly report
-    // sqrt(27)/2 (~2.598) here instead of the correct ~3.0414.
+    // the tilted box — genuinely grows the bounding radius to sqrt(37) ≈ 6.083.
+    // An implementation that ignored rotation would incorrectly report
+    // sqrt(27) ≈ 5.196 here instead of the correct ~6.083.
     const board: ComponentInstance = {
       id: 'b1', componentDefinitionId: 'test_board', position: [0, 0, 0], rotation: [0, Math.PI / 4, 0],
       dimensions: { thickness: 2, width: 2, length: 10 }, material: '#000',
     }
     const result = computeInstanceBounds([board])
-    expect(result.radius).toBeCloseTo(Math.sqrt(37) / 2, 3)
+    expect(result.radius).toBeCloseTo(Math.sqrt(37), 3)
   })
 
   it('computes a cylinder\'s bounds from its radius and length', () => {
     // diameter=4 (radius=2), length=10 (half=5) -> half-extents [2,2,5].
+    // half-diagonal = sqrt(2^2+2^2+5^2) = sqrt(33) ≈ 5.745
     const rod: ComponentInstance = {
       id: 'r1', componentDefinitionId: 'test_rod', position: [0, 0, 0], rotation: [0, 0, 0],
       dimensions: { diameter: 4, length: 10 }, material: '#000',
     }
     const result = computeInstanceBounds([rod])
-    expect(result.radius).toBeCloseTo(Math.sqrt(33) / 2, 3)
+    expect(result.radius).toBeCloseTo(Math.sqrt(33), 3)
   })
 
   it('merges multiple pieces into one bounding sphere covering all of them', () => {
