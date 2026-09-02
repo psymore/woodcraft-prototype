@@ -5,15 +5,16 @@ import { closestBetweenWorldAnchors, findConnectionCandidates, getAnchors, pinDi
 import type { AnchorMatch, ComponentInstance, ConnectionCandidate } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
 
-// Candidate orb — bigger than the piece geometry it sits on top of, an
-// easier touch target than the raw joint. Unchanged from before this
-// change.
-const MARKER_RADIUS = 0.5
+// Candidate orb. Small enough that the preview line (below) can visibly
+// protrude past it at the maximum candidate gap (SNAP_DISTANCE/2 = 0.35 >
+// this radius), while still being a comfortable tap target.
+const CANDIDATE_MARKER_RADIUS = 0.25
 // Candidate preview line — thinner than the orb, a secondary visual cue
 // showing the two anchors about to snap together.
 const LINE_RADIUS = 0.08
-// Confirmed-connection pin — same diameter as the old marker sphere it
-// replaces, for a comparably easy tap target.
+// Confirmed-connection pin — sized as a comfortable tap target, replacing
+// the old marker sphere this connection state used to render as a
+// (now-removed) opaque sphere at the joint.
 const PIN_RADIUS = 0.25
 const PIN_LENGTH = 1.5
 const CANDIDATE_COLOR = '#ff8c00'
@@ -117,7 +118,7 @@ export function ConnectionMarkers() {
               </mesh>
             )}
             <mesh position={midpoint} onPointerDown={stop} onClick={onConfirm}>
-              <sphereGeometry args={[MARKER_RADIUS, 12, 12]} />
+              <sphereGeometry args={[CANDIDATE_MARKER_RADIUS, 12, 12]} />
               <meshStandardMaterial color={CANDIDATE_COLOR} />
             </mesh>
           </group>
@@ -127,9 +128,16 @@ export function ConnectionMarkers() {
         const found = matchOf(connection.pieceAId, connection.a.anchorIndex, connection.pieceBId, connection.b.anchorIndex)
         if (!found) return null
         const { pieceA, pieceB, match } = found
-        // Coincident by construction (confirmConnection closes the gap
-        // exactly) — either point is the joint.
-        const joint = match.pointA
+        // Coincident at confirm time (confirmConnection closes the gap
+        // exactly), but a live connection can drift apart by up to
+        // SNAP_DISTANCE before pruneStaleConnections drops it — using the
+        // midpoint (not just one side's point) keeps the pin correctly
+        // centered even after some drift.
+        const joint: [number, number, number] = [
+          (match.pointA[0] + match.pointB[0]) / 2,
+          (match.pointA[1] + match.pointB[1]) / 2,
+          (match.pointA[2] + match.pointB[2]) / 2,
+        ]
         const direction = pinDirection(joint, pieceA, pieceB)
         const tip: [number, number, number] = [
           joint[0] + direction[0] * PIN_LENGTH,

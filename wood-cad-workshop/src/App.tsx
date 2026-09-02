@@ -63,7 +63,11 @@ function App() {
     if (!controls) return
     const camera = controls.object as THREE.PerspectiveCamera
     const { center, radius } = computeInstanceBounds(pieces)
-    const distance = Math.max(radius * 2.5, 10)
+    // Explicitly mirrors OrbitControls' own maxDistance={300} below —
+    // belt-and-suspenders so `distance` accurately reflects where the
+    // camera will actually end up, rather than relying solely on
+    // OrbitControls' internal clamp during controls.update().
+    const distance = Math.min(Math.max(radius * 2.5, 10), 300)
     const direction = new THREE.Vector3().subVectors(camera.position, controls.target).normalize()
     controls.target.set(...center)
     camera.position.copy(controls.target).addScaledVector(direction, distance)
