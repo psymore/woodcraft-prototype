@@ -88,10 +88,26 @@ real citations instead of an uncited "representative" comment:
   static bending MOR, dry (12% MC) — USDA Forest Products Laboratory,
   [Wood Handbook, Chapter 5, Table 5-3a](https://www.fpl.fs.usda.gov/documnts/fplgtr/fplgtr190/chapter_05.pdf).
 - `connectionCapacity: 600` (≈135 lbf) — average breaking load of a
-  doweled spruce joint, the weakest clean-break (non-screw) joint type
-  in [woodgears.ca's published joint-strength tests](https://woodgears.ca/joint_strength/),
+  **doweled spruce joint** (not red oak), the weakest clean-break
+  (non-screw) joint type in
+  [woodgears.ca's published joint-strength tests](https://woodgears.ca/joint_strength/),
   chosen as the conservative floor per the "why this is a narrow
   exception" note above.
+
+**Deliberate cross-species mismatch, not an oversight:** the two
+constants above cite two different species — red oak for the bar's own
+bending strength, spruce for the joint. That's intentional, not a
+copy-paste error: `bendingStrength` estimates the strength of the wood
+the bar itself is made of, while `connectionCapacity` estimates the
+weakest commonly-tested wood-to-wood joint regardless of what the bar
+is made of (the engine has no way to know what hardware the user
+actually used — see "why this is a narrow exception" above), and
+spruce's joint numbers happen to be the more conservative (lower)
+of the two species woodgears.ca tested. Using a weaker species for the
+joint number only makes the connection check more conservative, never
+less — but the UI's two citation lines must each name their own species
+explicitly (not just link out) so this isn't read as one coherent
+single-species picture.
 
 **Calc module:** new function alongside `checkPullupBarBending` in
 `structuralCheck.ts`:
@@ -126,7 +142,10 @@ app accent blue, `#4a90d9`) source citation line — a link
 source above (Wood Handbook chapter PDF / woodgears.ca page
 respectively), so a curious user can immediately see and verify what
 the estimate is actually based on instead of just trusting a bare
-number.
+number. Per the cross-species note above, each citation's link text
+names its own species inline — "Source: red oak, USDA Wood Handbook ↗"
+and "Source: spruce dowel joint, woodgears.ca ↗" — never a bare "Source
+↗" that could read as one shared, single-species basis for both rows.
 
 **Testing:** `checkPullupBarConnection` gets the same test treatment as
 `checkPullupBarBending` in `structuralCheck.test.ts` — known-input/
