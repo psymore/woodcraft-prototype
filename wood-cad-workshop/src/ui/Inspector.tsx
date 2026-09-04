@@ -1,11 +1,64 @@
 import { useState } from 'react'
-import { getComponent, checkPullupBarBending, type StructuralCheckStatus } from '../engine'
+import { getComponent, checkPullupBarBending, checkPullupBarConnection, type StructuralCheckStatus } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
 
 const STATUS_COLORS: Record<StructuralCheckStatus, string> = {
   safe: '#2e7d32',
   warning: '#f9a825',
   unsafe: '#c62828',
+}
+
+const SOURCE_LINK_COLOR = '#4a90d9'
+
+function formatSafetyFactor(safetyFactor: number): string {
+  return Number.isFinite(safetyFactor) ? safetyFactor.toFixed(2) : '∞'
+}
+
+// One result row (bending or connection check) — status chip, safety
+// factor, and its own explicit, distinctly colored source citation link.
+// Each check cites a different species (see the structural-check spec's
+// 2026-09-05 amendment) — sourceLabel must name it, never a bare
+// "Source ↗", so the two rows never read as one shared basis.
+function StructuralResultRow({
+  label,
+  status,
+  safetyFactor,
+  sourceLabel,
+  sourceUrl,
+}: {
+  label: string
+  status: StructuralCheckStatus
+  safetyFactor: number
+  sourceLabel: string
+  sourceUrl: string
+}) {
+  return (
+    <div style={{ marginTop: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            background: STATUS_COLORS[status],
+            display: 'inline-block',
+            flexShrink: 0,
+          }}
+        />
+        <span>
+          {label}: {formatSafetyFactor(safetyFactor)} ({status})
+        </span>
+      </div>
+      <a
+        href={sourceUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ fontSize: 11, color: SOURCE_LINK_COLOR, display: 'block', marginTop: 2 }}
+      >
+        Source: {sourceLabel} ↗
+      </a>
+    </div>
+  )
 }
 
 export function Inspector() {
@@ -31,16 +84,20 @@ export function Inspector() {
     movePiece(instance.id, next)
   }
 
-  const bendingStrength = definition.structuralProperties.bendingStrength
-  const showStructuralCheck = instance.componentDefinitionId === 'pullup_bar' && bendingStrength !== undefined
-  const structuralResult = showStructuralCheck
-    ? checkPullupBarBending({
-        diameterIn: instance.dimensions.diameter,
-        lengthIn: instance.dimensions.length,
-        userWeightKg,
-        bendingStrength,
-      })
-    : null
+  const isPullupBar = instance.componentDefinitionId === 'pullup_bar'
+  const { bendingStrength, connectionCapacity } = definition.structuralProperties
+  const bendingResult =
+    isPullupBar && bendingStrength !== undefined
+      ? checkPullupBarBending({
+          diameterIn: instance.dimensions.diameter,
+          lengthIn: instance.dimensions.length,
+          userWeightKg,
+          bendingStrength,
+        })
+      : null
+  const connectionResult =
+    isPullupBar && connectionCapacity !== undefined ? checkPullupBarConnection({ userWeightKg, connectionCapacity }) : null
+  const showStructuralSection = bendingResult !== null || connectionResult !== null
 
   if (collapsed) {
     return (
@@ -141,7 +198,7 @@ export function Inspector() {
         {instance.material}
       </div>
 
-      {structuralResult && (
+      {showStructuralSection && (
         <>
           <div style={{ fontWeight: 'bold', marginTop: 8 }}>Structural Check (estimate)</div>
           <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
@@ -157,21 +214,25 @@ export function Inspector() {
               style={{ width: 80, minHeight: 44 }}
             />
           </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-            <span
-              style={{
-                width: 10,
-                height: 10,
-                borderRadius: '50%',
-                background: STATUS_COLORS[structuralResult.status],
-                display: 'inline-block',
-              }}
+          {bendingResult && (
+            <StructuralResultRow
+              label="Bending safety factor"
+              status={bendingResult.status}
+              safetyFactor={bendingResult.safetyFactor}
+              sourceLabel="red oak, USDA Wood Handbook"
+              sourceUrl="https://www.fpl.fs.usda.gov/documnts/fplgtr/fplgtr190/chapter_05.pdf"
             />
-            <span>
-              Safety factor: {Number.isFinite(structuralResult.safetyFactor) ? structuralResult.safetyFactor.toFixed(2) : '∞'} ({structuralResult.status})
-            </span>
-          </div>
-          <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+          )}
+          {connectionResult && (
+            <StructuralResultRow
+              label="Connection safety factor"
+              status={connectionResult.status}
+              safetyFactor={connectionResult.safetyFactor}
+              sourceLabel="spruce dowel joint, woodgears.ca"
+              sourceUrl="https://woodgears.ca/joint_strength/"
+            />
+          )}
+          <div style={{ fontSize: 11, color: '#666', marginTop: 6 }}>
             Estimate only — not a certified structural analysis.
           </div>
         </>

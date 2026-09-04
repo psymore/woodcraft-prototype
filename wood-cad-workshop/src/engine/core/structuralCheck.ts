@@ -41,3 +41,32 @@ export function classifySafetyFactor(safetyFactor: number): StructuralCheckStatu
   if (safetyFactor >= 2) return 'warning'
   return 'unsafe'
 }
+
+// A distinct shape from StructuralCheckResult: this check compares a
+// force to a capacity directly (no bearing area is modeled), so there's
+// no stress in Pa to report — reusing StructuralCheckResult's `stress`
+// field would misrepresent what's being compared.
+export interface ConnectionCheckResult {
+  reactionForce: number // N
+  safetyFactor: number
+  status: StructuralCheckStatus
+}
+
+// Shear/pull-apart estimate at the pull-up bar's own two end
+// connections (see the structural-check spec's 2026-09-05 amendment for
+// why this is scoped narrowly to just this one component's joints, not
+// a general shear check). For a symmetric simply-supported beam under a
+// center point load, each support carries exactly half the load.
+export function checkPullupBarConnection(params: { userWeightKg: number; connectionCapacity: number }): ConnectionCheckResult {
+  const { userWeightKg, connectionCapacity } = params
+
+  if (userWeightKg <= 0) {
+    return { reactionForce: 0, safetyFactor: Infinity, status: 'safe' }
+  }
+
+  const forceN = userWeightKg * GRAVITY
+  const reactionForce = forceN / 2
+  const safetyFactor = connectionCapacity / reactionForce
+
+  return { reactionForce, safetyFactor, status: classifySafetyFactor(safetyFactor) }
+}

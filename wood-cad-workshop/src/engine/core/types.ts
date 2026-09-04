@@ -14,6 +14,7 @@ export type ConnectionRole = 'ends' | 'single' | 'none'
 
 export interface StructuralProperties {
   bendingStrength?: number // MOR (modulus of rupture), in Pa — nominal bending strength used by the structural check
+  connectionCapacity?: number // nominal end-connection shear/pull-apart capacity, in N — see structuralCheck.ts's checkPullupBarConnection
 }
 
 export interface ComponentDefinition {

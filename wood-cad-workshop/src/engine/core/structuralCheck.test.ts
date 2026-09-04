@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { checkPullupBarBending, classifySafetyFactor } from './structuralCheck'
+import { checkPullupBarBending, checkPullupBarConnection, classifySafetyFactor } from './structuralCheck'
 
 describe('classifySafetyFactor', () => {
   it('classifies safe at and above 4', () => {
@@ -38,14 +38,15 @@ describe('checkPullupBarBending', () => {
 
   it('computes an unsafe result for the actual pull-up bar dimensions under an 80kg load', () => {
     // Mirrors PULLUP_BAR_DEFINITION (diameter=1.25in, length=48in,
-    // bendingStrength=98e6 Pa) — the shipped default is too slender at
-    // this span to safely hold an adult's full bodyweight, which is
-    // exactly the kind of estimate this feature exists to surface.
+    // bendingStrength=98.6e6 Pa, red oak MOR) — the shipped default is
+    // too slender at this span to safely hold an adult's full
+    // bodyweight, which is exactly the kind of estimate this feature
+    // exists to surface.
     const result = checkPullupBarBending({
       diameterIn: 1.25,
       lengthIn: 48,
       userWeightKg: 80,
-      bendingStrength: 98_000_000,
+      bendingStrength: 98_600_000,
     })
     expect(result.status).toBe('unsafe')
     expect(result.safetyFactor).toBeGreaterThan(1)
@@ -72,6 +73,35 @@ describe('checkPullupBarBending', () => {
       bendingStrength: 98_000_000,
     })
     expect(result.stress).toBe(0)
+    expect(result.safetyFactor).toBe(Infinity)
+    expect(result.status).toBe('safe')
+  })
+})
+
+describe('checkPullupBarConnection', () => {
+  it('computes a safe result for a light load', () => {
+    // P=20kg*9.81=196.2N, reactionForce=P/2=98.1N
+    // SF = 600 / 98.1 ≈ 6.12 -> safe
+    const result = checkPullupBarConnection({ userWeightKg: 20, connectionCapacity: 600 })
+    expect(result.status).toBe('safe')
+    expect(result.reactionForce).toBeCloseTo(98.1, 1)
+    expect(result.safetyFactor).toBeGreaterThan(4)
+  })
+
+  it('computes an unsafe result for an 80kg load against the shipped connectionCapacity', () => {
+    // Mirrors PULLUP_BAR_DEFINITION's connectionCapacity=600N (spruce
+    // doweled-joint estimate) — P=80kg*9.81=784.8N, reactionForce=392.4N
+    // SF = 600 / 392.4 ≈ 1.53 -> unsafe
+    const result = checkPullupBarConnection({ userWeightKg: 80, connectionCapacity: 600 })
+    expect(result.status).toBe('unsafe')
+    expect(result.reactionForce).toBeCloseTo(392.4, 1)
+    expect(result.safetyFactor).toBeGreaterThan(1)
+    expect(result.safetyFactor).toBeLessThan(2)
+  })
+
+  it('guards against non-positive weight without throwing', () => {
+    const result = checkPullupBarConnection({ userWeightKg: 0, connectionCapacity: 600 })
+    expect(result.reactionForce).toBe(0)
     expect(result.safetyFactor).toBe(Infinity)
     expect(result.status).toBe('safe')
   })
