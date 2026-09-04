@@ -87,6 +87,11 @@ real citations instead of an uncited "representative" comment:
 - `bendingStrength: 98_600_000` (98.6 MPa / 14,300 psi) — red oak,
   static bending MOR, dry (12% MC) — USDA Forest Products Laboratory,
   [Wood Handbook, Chapter 5, Table 5-3a](https://www.fpl.fs.usda.gov/documnts/fplgtr/fplgtr190/chapter_05.pdf).
+  **Superseded by [2026-09-05-wood-cad-workshop-species-database-design.md](2026-09-05-wood-cad-workshop-species-database-design.md):**
+  this definition-level constant is removed from `StructuralProperties`
+  entirely — bending strength now comes from the instance's selected
+  `speciesId` (red oak remains the default species for `pullup_bar`,
+  so default behavior is unchanged, but it's now user-editable).
 - `connectionCapacity: 600` (≈135 lbf) — average breaking load of a
   **doweled spruce joint** (not red oak), the weakest clean-break
   (non-screw) joint type in
