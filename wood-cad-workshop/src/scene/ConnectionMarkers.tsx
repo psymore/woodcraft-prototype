@@ -1,8 +1,16 @@
 import { useRef } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
-import { closestBetweenWorldAnchors, findConnectionCandidates, getAnchors, pinDirection, SNAP_DISTANCE, toWorldAnchor } from '../engine'
-import type { AnchorMatch, ComponentInstance, ConnectionCandidate } from '../engine'
+import {
+  classifyAnchorPairKind,
+  closestBetweenWorldAnchors,
+  findConnectionCandidates,
+  getAnchors,
+  pinDirection,
+  SNAP_DISTANCE,
+  toWorldAnchor,
+} from '../engine'
+import type { AnchorMatch, AnchorPairKind, ComponentInstance, ConnectionCandidate } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
 
 // Candidate orb. Small enough that the preview line (below) can visibly
@@ -17,8 +25,24 @@ const LINE_RADIUS = 0.08
 // (now-removed) opaque sphere at the joint.
 const PIN_RADIUS = 0.25
 const PIN_LENGTH = 1.5
-const CANDIDATE_COLOR = '#ff8c00'
 const CONNECTED_COLOR = '#d9342b'
+
+// Candidate color by anchor-pair kind — SketchUp-inference-style semantic
+// coding so a candidate's color hints at what kind of joint it would make
+// (two ends meeting exactly vs. one end docking onto a face/edge), instead
+// of every candidate looking identical regardless of geometry.
+const CANDIDATE_COLOR_BY_KIND: Record<AnchorPairKind, string> = {
+  'point-point': '#ff8c00', // orange — original color, most common case (e.g. two board ends)
+  'point-segment': '#3fa7d6', // blue — one end docking onto another piece's edge
+  'point-face': '#2ecc71', // green — one end resting on another piece's face
+}
+
+function candidateColor(pieceA: ComponentInstance, aAnchorIndex: number, pieceB: ComponentInstance, bAnchorIndex: number): string {
+  const kindA = getAnchors(pieceA)[aAnchorIndex].kind
+  const kindB = getAnchors(pieceB)[bAnchorIndex].kind
+  return CANDIDATE_COLOR_BY_KIND[classifyAnchorPairKind(kindA, kindB)]
+}
+
 // A fast double-tap confirms then instantly detaches, since the confirm
 // and detach markers can land at the same screen position and React
 // flushes both synchronous clicks before either marker's position
@@ -96,13 +120,14 @@ export function ConnectionMarkers() {
       {candidates.map((candidate) => {
         const found = matchOf(candidate.pieceAId, candidate.a.anchorIndex, candidate.pieceBId, candidate.b.anchorIndex)
         if (!found) return null
-        const { match } = found
+        const { pieceA, pieceB, match } = found
         const midpoint: [number, number, number] = [
           (match.pointA[0] + match.pointB[0]) / 2,
           (match.pointA[1] + match.pointB[1]) / 2,
           (match.pointA[2] + match.pointB[2]) / 2,
         ]
         const line = segmentTransform(match.pointA, match.pointB)
+        const color = candidateColor(pieceA, candidate.a.anchorIndex, pieceB, candidate.b.anchorIndex)
         const onConfirm = (e: ThreeEvent<MouseEvent>) => {
           stop(e)
           const connectionId = `conn-${candidate.pieceAId}-${candidate.pieceBId}-${candidate.a.anchorIndex}-${candidate.b.anchorIndex}`
@@ -114,12 +139,12 @@ export function ConnectionMarkers() {
             {line.length > 1e-6 && (
               <mesh position={line.position} quaternion={line.quaternion} onPointerDown={stop} onClick={onConfirm}>
                 <cylinderGeometry args={[LINE_RADIUS, LINE_RADIUS, line.length, 8]} />
-                <meshStandardMaterial color={CANDIDATE_COLOR} />
+                <meshStandardMaterial color={color} />
               </mesh>
             )}
             <mesh position={midpoint} onPointerDown={stop} onClick={onConfirm}>
               <sphereGeometry args={[CANDIDATE_MARKER_RADIUS, 12, 12]} />
-              <meshStandardMaterial color={CANDIDATE_COLOR} />
+              <meshStandardMaterial color={color} />
             </mesh>
           </group>
         )

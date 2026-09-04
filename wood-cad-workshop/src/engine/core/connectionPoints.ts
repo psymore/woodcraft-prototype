@@ -127,6 +127,24 @@ export function pointAtParam(anchor: WorldAnchor, param?: AnchorParam): Vec3 {
   ]
 }
 
+export type AnchorPairKind = 'point-point' | 'point-segment' | 'point-face'
+
+// Classifies a candidate/connection's anchor-kind pairing for presentation
+// (ConnectionMarkers.tsx candidate coloring) — not used by any matching or
+// distance logic. Mirrors closestBetweenWorldAnchors' invariant that at
+// least one side is always point-kind (segment-segment/face-face pairs
+// never reach a candidate — see findConnectionCandidates/
+// findClosestConnectionMatch's own filter); throws otherwise so an
+// unsupported future pairing can't silently mis-render instead of
+// surfacing the gap.
+export function classifyAnchorPairKind(kindA: AnchorPrimitive['kind'], kindB: AnchorPrimitive['kind']): AnchorPairKind {
+  if (kindA !== 'point' && kindB !== 'point') {
+    throw new Error(`classifyAnchorPairKind: unsupported anchor kind pair (${kindA}, ${kindB})`)
+  }
+  if (kindA === 'point' && kindB === 'point') return 'point-point'
+  return kindA === 'face' || kindB === 'face' ? 'point-face' : 'point-segment'
+}
+
 export interface AnchorMatch {
   distance: number
   pointA: Vec3 // closest-approach point ON A's anchor, world space

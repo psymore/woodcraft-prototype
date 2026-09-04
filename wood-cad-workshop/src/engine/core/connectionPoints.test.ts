@@ -5,6 +5,7 @@ import {
   toWorldAnchor,
   closestBetweenWorldAnchors,
   findClosestConnectionMatch,
+  classifyAnchorPairKind,
 } from './connectionPoints'
 import type { ComponentDefinition, ComponentInstance } from './types'
 
@@ -333,5 +334,27 @@ describe('findClosestConnectionMatch', () => {
     }
     const match = findClosestConnectionMatch(rod, [0, 0, 0.5], [foot], [{ pieceId: 'r1', anchorIndex: 1 }])
     expect(match).toBeNull()
+  })
+})
+
+describe('classifyAnchorPairKind', () => {
+  it('classifies a point-point pair', () => {
+    expect(classifyAnchorPairKind('point', 'point')).toBe('point-point')
+  })
+
+  it('classifies a point-segment pair regardless of side order', () => {
+    expect(classifyAnchorPairKind('point', 'segment')).toBe('point-segment')
+    expect(classifyAnchorPairKind('segment', 'point')).toBe('point-segment')
+  })
+
+  it('classifies a point-face pair regardless of side order', () => {
+    expect(classifyAnchorPairKind('point', 'face')).toBe('point-face')
+    expect(classifyAnchorPairKind('face', 'point')).toBe('point-face')
+  })
+
+  it('throws for a pair with no point side (unsupported, mirrors closestBetweenWorldAnchors)', () => {
+    expect(() => classifyAnchorPairKind('segment', 'segment')).toThrow()
+    expect(() => classifyAnchorPairKind('face', 'face')).toThrow()
+    expect(() => classifyAnchorPairKind('segment', 'face')).toThrow()
   })
 })
