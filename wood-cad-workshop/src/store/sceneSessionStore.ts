@@ -27,6 +27,12 @@ interface SceneSessionState {
   connections: Connection[]
   showRotationGizmo: boolean
   showMoveHandle: boolean
+  // Set by movePiece when a drag ends up right next to an anchor that's
+  // already claimed by another connection — the closest possible match,
+  // but not one movePiece can make. Cleared as soon as the drag moves
+  // away from that anchor, or the drag ends (see setDraggingPiece). A
+  // live "why didn't this connect" hint, not a persisted/timed toast.
+  blockedConnectionHint: string | null
 
   selectPiece: (id: string | null) => void
   addComponent: (definition: ComponentDefinition) => void
@@ -62,6 +68,7 @@ export function createSceneSessionStore() {
     connections: [],
     showRotationGizmo: true,
     showMoveHandle: true,
+    blockedConnectionHint: null,
 
     selectPiece: (id) => set({ selectedId: id }),
 
@@ -104,12 +111,21 @@ export function createSceneSessionStore() {
         // it can do is match against a group member's stale pre-move
         // position (see the near-closed-loop bug this guards against).
         // Excluding the whole group leaves candidates outside it unaffected.
-        const match = findClosestConnectionMatch(
-          moving,
-          position,
-          state.instances.filter((i) => !groupIds.has(i.id)),
-          excludeAnchors,
-        )
+        const otherInstances = state.instances.filter((i) => !groupIds.has(i.id))
+        const match = findClosestConnectionMatch(moving, position, otherInstances, excludeAnchors)
+
+        // If the exclusion-aware search above came up empty, check whether
+        // that's because nothing is nearby at all, or because the nearest
+        // possible match exists but its anchor is already claimed — the
+        // same search with no exclusions. Only runs when `match` is null,
+        // so a normal successful drag (the common case) never pays this
+        // second scan. Mirrors this file's own note elsewhere that the
+        // underlying O(pieces × anchors) scan is fine at current scale.
+        const blockedConnectionHint: string | null =
+          match === null && excludeAnchors.length > 0 && findClosestConnectionMatch(moving, position, otherInstances, []) !== null
+            ? 'This point is already connected to another piece.'
+            : null
+
         const finalPosition: [number, number, number] = match
           ? [position[0] + match.delta[0], position[1] + match.delta[1], position[2] + match.delta[2]]
           : position
@@ -147,6 +163,7 @@ export function createSceneSessionStore() {
         return {
           instances: instancesAtFinal,
           connections: nextConnections,
+          blockedConnectionHint,
         }
       }),
 
@@ -314,7 +331,11 @@ export function createSceneSessionStore() {
 
     setExplodeAmount: (amount) => set({ explodeAmount: amount }),
 
-    setDraggingPiece: (dragging) => set({ isDraggingPiece: dragging }),
+    setDraggingPiece: (dragging) =>
+      // A drag ending is also the natural point to clear any lingering
+      // "blocked" hint — it's only meaningful while actively dragging near
+      // the contested anchor.
+      set(dragging ? { isDraggingPiece: dragging } : { isDraggingPiece: dragging, blockedConnectionHint: null }),
 
     toggleRotationGizmo: () => set((state) => ({ showRotationGizmo: !state.showRotationGizmo })),
 

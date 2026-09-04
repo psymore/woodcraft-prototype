@@ -8,6 +8,7 @@ import { MainMenu } from './ui/MainMenu'
 import { InventorySheet } from './ui/Inventory'
 import { Inspector } from './ui/Inspector'
 import { GizmoToggles } from './ui/GizmoToggles'
+import { ConnectionHint } from './ui/ConnectionHint'
 import { getViewPreset, computeInstanceBounds } from './engine'
 import type { ComponentInstance, ViewName } from './engine'
 import { useSceneSession } from './store/sceneSessionStore'
@@ -123,6 +124,7 @@ function App() {
         <Inspector />
       </div>
       <GizmoToggles />
+      <ConnectionHint />
     </div>
   )
 }

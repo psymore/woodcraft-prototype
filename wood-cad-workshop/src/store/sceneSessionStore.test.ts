@@ -32,6 +32,22 @@ function rod(id: string, position: [number, number, number]): ComponentInstance 
   }
 }
 
+// A much shorter rod than rod() above — used to isolate the
+// blockedConnectionHint tests below to exactly one contested joint,
+// since a full-length (10-unit) rod's *other* end can land close enough
+// to a second, unclaimed anchor to form its own accidental match (see
+// that test's comment for the specific case this avoids).
+function shortRod(id: string, position: [number, number, number], length: number): ComponentInstance {
+  return {
+    id,
+    componentDefinitionId: 'test_rod',
+    position,
+    rotation: [0, 0, 0],
+    dimensions: { diameter: 1, length },
+    material: '#000',
+  }
+}
+
 beforeEach(() => {
   clearRegistry()
   registerComponent(rodDefinition())
@@ -137,5 +153,80 @@ describe('movePiece — unconnected piece', () => {
     // pruneStaleConnections returns the original array reference when
     // nothing changed, and no new connection was created.
     expect(connections).toBe(emptyConnections)
+  })
+})
+
+describe('movePiece — blockedConnectionHint', () => {
+  // r1-r2 are pre-connected at world z=5 (r1's idx1, r2's idx0 — both
+  // claimed). r3 is a short (0.4-unit) rod so both its own anchors sit
+  // right on top of that single contested joint when dragged there,
+  // instead of one end also happening to land near r2's own free idx1 —
+  // which a full 10-unit rod would (its far end would land near z=15,
+  // right where r2's unclaimed idx1 already is), forming an unrelated
+  // accidental connection instead of exercising the "blocked" path.
+  function connectedPair(): { r1: ComponentInstance; r2: ComponentInstance; c1: Connection } {
+    return {
+      r1: rod('r1', [0, 0, 0]), // points z=-5 (free), z=5 (-> r2, claimed)
+      r2: rod('r2', [0, 0, 10]), // points z=5 (-> r1, claimed), z=15 (free)
+      c1: { id: 'c1', pieceAId: 'r1', pieceBId: 'r2', a: { anchorIndex: 1 }, b: { anchorIndex: 0 } },
+    }
+  }
+
+  it('sets blockedConnectionHint when the only anchor in range is already claimed', () => {
+    const { r1, r2, c1 } = connectedPair()
+    const r3 = shortRod('r3', [0, 0, 100], 0.4) // starts far from the assembly
+
+    const store = createSceneSessionStore()
+    store.setState({ instances: [r1, r2, r3], connections: [c1] })
+
+    // Drag r3 onto the claimed joint at world z=5.
+    store.getState().movePiece('r3', [0, 0, 5])
+
+    const state = store.getState()
+    expect(state.blockedConnectionHint).not.toBeNull()
+    // r3 did not snap — no connection delta was applied, since the only
+    // nearby anchor was excluded.
+    expect(state.instances.find((i) => i.id === 'r3')?.position).toEqual([0, 0, 5])
+    expect(state.connections).toHaveLength(1)
+  })
+
+  it('does not set blockedConnectionHint when nothing is nearby at all', () => {
+    const { r1, r2, c1 } = connectedPair()
+    const r3 = shortRod('r3', [0, 0, 100], 0.4)
+
+    const store = createSceneSessionStore()
+    store.setState({ instances: [r1, r2, r3], connections: [c1] })
+
+    store.getState().movePiece('r3', [0, 0, 100.5])
+
+    expect(store.getState().blockedConnectionHint).toBeNull()
+  })
+
+  it('clears blockedConnectionHint once the drag moves away from the claimed anchor', () => {
+    const { r1, r2, c1 } = connectedPair()
+    const r3 = shortRod('r3', [0, 0, 100], 0.4)
+
+    const store = createSceneSessionStore()
+    store.setState({ instances: [r1, r2, r3], connections: [c1] })
+
+    store.getState().movePiece('r3', [0, 0, 5])
+    expect(store.getState().blockedConnectionHint).not.toBeNull()
+
+    store.getState().movePiece('r3', [0, 0, 100])
+    expect(store.getState().blockedConnectionHint).toBeNull()
+  })
+
+  it('setDraggingPiece(false) clears blockedConnectionHint', () => {
+    const { r1, r2, c1 } = connectedPair()
+    const r3 = shortRod('r3', [0, 0, 100], 0.4)
+
+    const store = createSceneSessionStore()
+    store.setState({ instances: [r1, r2, r3], connections: [c1] })
+
+    store.getState().movePiece('r3', [0, 0, 5])
+    expect(store.getState().blockedConnectionHint).not.toBeNull()
+
+    store.getState().setDraggingPiece(false)
+    expect(store.getState().blockedConnectionHint).toBeNull()
   })
 })
