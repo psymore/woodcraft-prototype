@@ -3,6 +3,7 @@ import { DoubleSide } from 'three'
 import { Grid } from '@react-three/drei'
 import { Piece } from './Piece'
 import { ConnectionMarkers } from './ConnectionMarkers'
+import { AnchorMarkers } from './AnchorMarkers'
 import { getComponent, computeCentroid } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
 
@@ -39,6 +40,7 @@ export function Scene({ multiTouchActiveRef }: { multiTouchActiveRef: RefObject<
         />
       ))}
       <ConnectionMarkers />
+      <AnchorMarkers />
     </>
   )
 }

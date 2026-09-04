@@ -14,8 +14,10 @@ export function GizmoToggles() {
   const hasSelection = useSceneSession((s) => s.selectedId !== null)
   const showRotationGizmo = useSceneSession((s) => s.showRotationGizmo)
   const showMoveHandle = useSceneSession((s) => s.showMoveHandle)
+  const showConnectionPoints = useSceneSession((s) => s.showConnectionPoints)
   const toggleRotationGizmo = useSceneSession((s) => s.toggleRotationGizmo)
   const toggleMoveHandle = useSceneSession((s) => s.toggleMoveHandle)
+  const toggleConnectionPoints = useSceneSession((s) => s.toggleConnectionPoints)
 
   if (!hasSelection) return null
 
@@ -26,6 +28,9 @@ export function GizmoToggles() {
       </button>
       <button onClick={toggleRotationGizmo} style={switchStyle(showRotationGizmo)} title="Rotation gizmo">
         ↻
+      </button>
+      <button onClick={toggleConnectionPoints} style={switchStyle(showConnectionPoints)} title="Show connection points">
+        ⚓
       </button>
     </div>
   )

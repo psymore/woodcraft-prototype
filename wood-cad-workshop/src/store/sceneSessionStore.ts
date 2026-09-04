@@ -27,6 +27,14 @@ interface SceneSessionState {
   connections: Connection[]
   showRotationGizmo: boolean
   showMoveHandle: boolean
+  // Discoverability toggle (default off — see GizmoToggles.tsx): when on
+  // and a piece is selected, AnchorMarkers.tsx renders a small dot at
+  // every one of that piece's own connection points, not just the ones
+  // currently near another piece. Deliberately scoped to the selected
+  // piece only, not every instance in the scene — showing every box
+  // piece's up to 10 anchors at once would be the same visual-noise/
+  // O(pieces × anchors) concern already flagged for findConnectionCandidates.
+  showConnectionPoints: boolean
   // Set by movePiece when a drag ends up right next to an anchor that's
   // already claimed by another connection — the closest possible match,
   // but not one movePiece can make. Cleared as soon as the drag moves
@@ -51,6 +59,7 @@ interface SceneSessionState {
   setDraggingPiece: (dragging: boolean) => void
   toggleRotationGizmo: () => void
   toggleMoveHandle: () => void
+  toggleConnectionPoints: () => void
 }
 
 // One short-lived per-session store, created via a factory — mirrors
@@ -68,6 +77,7 @@ export function createSceneSessionStore() {
     connections: [],
     showRotationGizmo: true,
     showMoveHandle: true,
+    showConnectionPoints: false,
     blockedConnectionHint: null,
 
     selectPiece: (id) => set({ selectedId: id }),
@@ -340,6 +350,8 @@ export function createSceneSessionStore() {
     toggleRotationGizmo: () => set((state) => ({ showRotationGizmo: !state.showRotationGizmo })),
 
     toggleMoveHandle: () => set((state) => ({ showMoveHandle: !state.showMoveHandle })),
+
+    toggleConnectionPoints: () => set((state) => ({ showConnectionPoints: !state.showConnectionPoints })),
   }))
 }
 
