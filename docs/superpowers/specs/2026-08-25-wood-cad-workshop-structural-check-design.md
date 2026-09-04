@@ -38,6 +38,103 @@ component other than the pull-up bar, and anything resembling
 certified structural analysis. The UI must visibly label the result as
 an estimate.
 
+## Amendment (2026-09-05) — end-connection check + cited sources
+
+Narrows, not removes, the "buckling or shear checks" exclusion above:
+this amendment permits exactly **one** shear/pull-apart check, at the
+pull-up bar's own two end connections (where it meets the two vertical
+posts), and nothing else — general shear/buckling checks, deflection,
+and structural checks on any other component all remain out of scope
+exactly as before. Motivated by
+[docs/reference/structural-strength-and-competitive-research.md](../../reference/structural-strength-and-competitive-research.md):
+the bending-only check says nothing about the joint itself failing
+first, which for a bodyweight-bearing bar is a real, common failure
+mode worth the same estimate treatment as the bending check already
+gets.
+
+**Why this is a narrow exception, not a scope reopen:** the engine's
+`Connection` model (`engine/core/connections.ts`) has no joint-type
+concept (screw, dowel, notch-rest — see the deferred `jointType`
+architecture idea) — it only knows two anchors are coincident. This
+check can't know what hardware the user actually used, so it assumes
+the weakest commonly-tested wood-to-wood joint as a conservative
+floor, same spirit as the existing `bendingStrength` being one
+hardcoded representative constant rather than a real species lookup.
+
+**Engineering model:** same simply-supported, center-point-load beam as
+above. For a symmetric center load, each support reaction is `P/2` (P =
+`userWeightKg × g`). Compared against a nominal connection capacity:
+
+```
+reactionForce = P / 2
+safetyFactor = connectionCapacity / reactionForce
+```
+
+Same `SF ≥ 4 / ≥ 2 / < 2` → `safe`/`warning`/`unsafe` thresholds as the
+bending check, for one consistent scale across both results.
+
+**Data model:** `StructuralProperties` gains a second optional field:
+
+```ts
+export interface StructuralProperties {
+  bendingStrength?: number // MOR, in Pa
+  connectionCapacity?: number // nominal end-connection shear/pull-apart capacity, in N
+}
+```
+
+`PULLUP_BAR_DEFINITION.structuralProperties` gets both fields, now with
+real citations instead of an uncited "representative" comment:
+- `bendingStrength: 98_600_000` (98.6 MPa / 14,300 psi) — red oak,
+  static bending MOR, dry (12% MC) — USDA Forest Products Laboratory,
+  [Wood Handbook, Chapter 5, Table 5-3a](https://www.fpl.fs.usda.gov/documnts/fplgtr/fplgtr190/chapter_05.pdf).
+- `connectionCapacity: 600` (≈135 lbf) — average breaking load of a
+  doweled spruce joint, the weakest clean-break (non-screw) joint type
+  in [woodgears.ca's published joint-strength tests](https://woodgears.ca/joint_strength/),
+  chosen as the conservative floor per the "why this is a narrow
+  exception" note above.
+
+**Calc module:** new function alongside `checkPullupBarBending` in
+`structuralCheck.ts`:
+
+```ts
+export interface ConnectionCheckResult {
+  reactionForce: number // N
+  safetyFactor: number
+  status: StructuralCheckStatus
+}
+
+export function checkPullupBarConnection(params: {
+  userWeightKg: number
+  connectionCapacity: number // N
+}): ConnectionCheckResult
+```
+
+A distinct result type from `StructuralCheckResult` (not a reused
+`stress` field) — this check compares a force to a capacity directly,
+never derives a stress (no bearing area is modeled), so naming the
+field `stress` would misrepresent what's being compared. Same
+degenerate-input guard convention as `checkPullupBarBending`
+(`userWeightKg <= 0` → `safe`/`Infinity`).
+
+**UI:** `Inspector.tsx`'s existing "Structural Check (estimate)"
+section gains a second result row, "End Connection Check (estimate)",
+same colored safety-factor chip pattern as the bending row, sharing the
+same weight input (one weight drives both checks). Each of the two
+result rows additionally gets a small, distinctly colored (existing
+app accent blue, `#4a90d9`) source citation line — a link
+(`target="_blank" rel="noopener noreferrer"`) to that check's own cited
+source above (Wood Handbook chapter PDF / woodgears.ca page
+respectively), so a curious user can immediately see and verify what
+the estimate is actually based on instead of just trusting a bare
+number.
+
+**Testing:** `checkPullupBarConnection` gets the same test treatment as
+`checkPullupBarBending` in `structuralCheck.test.ts` — known-input/
+known-output, status-threshold boundaries, degenerate-input guard.
+`Inspector.tsx`'s new row and citation links are UI — left untested per
+this project's established convention, verified via `tsc` + manual/
+Playwright smoke test instead.
+
 ## Engineering model
 
 The pull-up bar is modeled as a **simply-supported beam** (mounted
@@ -98,6 +195,12 @@ red oak, ~98 MPa / ~14,300 psi ultimate bending strength; exact
 citation-grade sourcing is not required since this is explicitly an
 estimate tool, not certified analysis). All other component
 definitions keep `structuralProperties: {}`.
+
+**Superseded by the 2026-09-05 amendment above:** `StructuralProperties`
+gains a second field (`connectionCapacity`) and `PULLUP_BAR_DEFINITION`'s
+`bendingStrength` gets a real citation instead of the uncited
+"representative" value described in this paragraph — see the amendment
+for the current values and sourcing.
 
 ## Calc module
 
@@ -166,7 +269,11 @@ with Sub-project 7 (mobile polish) not having happened yet.
 ## Out of scope (explicit)
 
 - Structural checks on any component other than `pullup_bar`.
-- Dynamic/impact loading, buckling, shear, deflection limits.
+- Dynamic/impact loading, buckling, deflection limits, and shear checks
+  in general — narrowed by the 2026-09-05 amendment above to permit
+  exactly one shear/pull-apart check, at `pullup_bar`'s own two end
+  connections; every other shear/buckling/deflection case stays fully
+  out of scope.
 - A real material/species database — `bendingStrength` is a single
   hardcoded constant on one component definition, not a lookup table
   or user-editable material property.
