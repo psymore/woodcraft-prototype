@@ -103,6 +103,8 @@ so this is a clean removal, not a widening/narrowing concern.
 ## Wiring
 
 - **`spawn.ts`**: `createInstance` copies `speciesId: definition.defaultSpeciesId ?? undefined` alongside the existing `material: definition.material` line.
+
+**Amendment (found in final review):** the bullet above was incomplete — copying `material: definition.material` verbatim left 4 of 6 WOOD components' spawned color silently contradicting their own `defaultSpeciesId` (their hardcoded `material` hex didn't match that species' actual color). The implemented, corrected version derives `material` from the resolved species' color when one exists (`getSpecies(definition.defaultSpeciesId ?? undefined)?.color ?? definition.material`), falling back to `definition.material` only for `HARDWARE`/`FASTENER` components, which have no species. Any future sub-project that spawns a WOOD instance must go through this same derivation, not copy a definition's raw `material` field directly.
 - **`seedScene.ts`**: its two board instances are hand-written object
   literals, not built via `createInstance` — they bypass the wiring
   above entirely and would otherwise spawn with `speciesId: undefined`
