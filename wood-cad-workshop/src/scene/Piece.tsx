@@ -5,7 +5,7 @@ import { useThree } from '@react-three/fiber'
 import { TransformControls } from '@react-three/drei'
 import * as THREE from 'three'
 import type { ComponentDefinition, ComponentInstance } from '../engine'
-import { getBoxSize, getCylinderSize, getExplodedPosition, snapValue } from '../engine'
+import { depthBiasFor, getBoxSize, getCylinderSize, getExplodedPosition, snapValue } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
 
 const GRID_INCREMENT = 1
@@ -202,7 +202,12 @@ export function Piece({
             onPointerUp={handlePointerUp}
           >
             <cylinderGeometry args={[radius, radius, height, 16]} />
-            <meshStandardMaterial color={color} />
+            <meshStandardMaterial
+              color={color}
+              polygonOffset
+              polygonOffsetFactor={depthBiasFor(instance.id)}
+              polygonOffsetUnits={depthBiasFor(instance.id)}
+            />
           </mesh>
         </group>
         {verticalHandle([radius, radius, height / 2])}
@@ -232,7 +237,12 @@ export function Piece({
           onPointerUp={handlePointerUp}
         >
           <boxGeometry args={size} />
-          <meshStandardMaterial color={color} />
+          <meshStandardMaterial
+            color={color}
+            polygonOffset
+            polygonOffsetFactor={depthBiasFor(instance.id)}
+            polygonOffsetUnits={depthBiasFor(instance.id)}
+          />
         </mesh>
       </group>
       {verticalHandle([size[0] / 2, size[1] / 2, size[2] / 2])}
