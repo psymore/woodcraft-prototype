@@ -3,8 +3,9 @@ import { useSceneSession } from '../store/sceneSessionStore'
 const switchStyle = (active: boolean) => ({
   minWidth: 44,
   minHeight: 44,
-  background: active ? '#4a90d9' : '#eee',
-  color: active ? '#fff' : '#333',
+  background: active ? '#ff7a1a' : '#141210',
+  color: active ? '#100c08' : '#eae6df',
+  border: active ? '1px solid #ff7a1a' : '1px solid #2c2822',
 })
 
 // Bottom-right, opposite the menu button — lets the user hide the rotation

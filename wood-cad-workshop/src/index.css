@@ -1,3 +1,22 @@
+:root {
+  --wc-bg: #0b0b0c;
+  --wc-bg-gradient: radial-gradient(circle at 50% 25%, #161513 0%, #0b0b0c 72%);
+  --wc-panel: #141210;
+  --wc-panel-alt: #171512;
+  --wc-border: #2c2822;
+  --wc-text: #eae6df;
+  --wc-muted: #948d7f;
+  --wc-accent: #ff7a1a;
+  --wc-accent-contrast: #100c08;
+  --wc-safe: #4caf6d;
+  --wc-warn: #ffb020;
+  --wc-unsafe: #ff5c5c;
+  --wc-radius: 10px;
+  --wc-radius-sm: 6px;
+  --wc-font-ui: 'Archivo', system-ui, sans-serif;
+  --wc-font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+}
+
 html,
 body,
 #root {
@@ -8,5 +27,42 @@ body,
 }
 
 body {
-  color-scheme: light;
+  color-scheme: dark;
+  background: var(--wc-bg-gradient);
+  color: var(--wc-text);
+  font-family: var(--wc-font-ui);
+}
+
+button {
+  appearance: none;
+  background: var(--wc-panel);
+  color: var(--wc-text);
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  font-family: var(--wc-font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+input[type='number'],
+input[type='range'] {
+  accent-color: var(--wc-accent);
+}
+
+input[type='number'] {
+  background: var(--wc-panel);
+  color: var(--wc-text);
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius-sm);
+  font-family: var(--wc-font-mono);
+}
+
+a {
+  color: var(--wc-accent);
 }
