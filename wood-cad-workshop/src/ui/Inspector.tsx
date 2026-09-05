@@ -186,9 +186,9 @@ export function Inspector() {
         {((instance.rotation[2] * 180) / Math.PI).toFixed(0)}°
       </div>
 
-      <div style={{ fontWeight: 'bold', marginTop: 8 }}>Material</div>
+      <div style={{ fontWeight: 'bold', marginTop: 8 }}>{definition.category === 'WOOD' ? 'Species' : 'Material'}</div>
       {definition.category === 'WOOD' ? (
-        <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
           <span
             style={{
               width: 16,
@@ -199,7 +199,12 @@ export function Inspector() {
               flexShrink: 0,
             }}
           />
-          <select value={instance.speciesId ?? ''} onChange={(e) => changeSpecies(instance.id, e.target.value)} style={{ minHeight: 44 }}>
+          <select
+            aria-label="Species"
+            value={instance.speciesId ?? ''}
+            onChange={(e) => changeSpecies(instance.id, e.target.value)}
+            style={{ minHeight: 44 }}
+          >
             {SPECIES_LIST.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}

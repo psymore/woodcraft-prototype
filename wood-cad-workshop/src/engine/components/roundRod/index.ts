@@ -11,7 +11,7 @@ export const ROUND_ROD_DEFINITION: ComponentDefinition = {
   connectionRole: 'ends',
   structuralProperties: {},
   explodeDirection: null,
-  defaultSpeciesId: 'red_oak',
+  defaultSpeciesId: 'yellow_birch',
 }
 
 registerComponent(ROUND_ROD_DEFINITION)

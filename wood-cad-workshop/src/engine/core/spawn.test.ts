@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { createInstance } from './spawn'
 import type { ComponentDefinition } from './types'
+import { getComponents } from '../registry/registry'
+import { getSpecies } from './species'
+import '../index'
 
 function woodDefinition(defaultSpeciesId: string | null): ComponentDefinition {
   return {
@@ -26,5 +29,27 @@ describe('createInstance', () => {
   it('leaves speciesId undefined when defaultSpeciesId is null', () => {
     const instance = createInstance(woodDefinition(null))
     expect(instance.speciesId).toBeUndefined()
+  })
+})
+
+describe('createInstance — species/material consistency across real components', () => {
+  it('every WOOD component spawns with material matching its default species color', () => {
+    const woodDefinitions = getComponents().filter((d) => d.category === 'WOOD')
+    expect(woodDefinitions.length).toBeGreaterThan(0)
+    for (const definition of woodDefinitions) {
+      const instance = createInstance(definition)
+      const species = getSpecies(definition.defaultSpeciesId ?? undefined)
+      expect(species).toBeDefined()
+      expect(instance.material).toBe(species!.color)
+    }
+  })
+
+  it('every non-WOOD component spawns with its own definition.material unchanged', () => {
+    const nonWoodDefinitions = getComponents().filter((d) => d.category !== 'WOOD')
+    expect(nonWoodDefinitions.length).toBeGreaterThan(0)
+    for (const definition of nonWoodDefinitions) {
+      const instance = createInstance(definition)
+      expect(instance.material).toBe(definition.material)
+    }
   })
 })
