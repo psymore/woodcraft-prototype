@@ -10,7 +10,8 @@ export function createSeedInstances(): ComponentInstance[] {
       position: [-6, 1.75, 0],
       rotation: [0, 0, 0],
       dimensions: { thickness: 1.5, width: 3.5, length: 48 },
-      material: '#a6693f',
+      material: '#c19a6b', // douglas_fir — see species.ts
+      speciesId: 'douglas_fir',
     },
     {
       id: 'board-b',
@@ -18,7 +19,8 @@ export function createSeedInstances(): ComponentInstance[] {
       position: [6, 1.75, 0],
       rotation: [0, 0, 0],
       dimensions: { thickness: 1.5, width: 3.5, length: 36 },
-      material: '#8c5730',
+      material: '#a6693f', // red_oak — see species.ts
+      speciesId: 'red_oak',
     },
   ]
 }
