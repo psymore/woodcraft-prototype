@@ -14,5 +14,6 @@ export function createInstance(definition: ComponentDefinition): ComponentInstan
     rotation: [0, 0, 0],
     dimensions: { ...definition.defaultDimensions },
     material: definition.material,
+    speciesId: definition.defaultSpeciesId ?? undefined,
   }
 }
