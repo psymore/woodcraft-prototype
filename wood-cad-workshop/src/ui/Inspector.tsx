@@ -3,12 +3,12 @@ import { getComponent, checkPullupBarBending, checkPullupBarConnection, getSpeci
 import { useSceneSession } from '../store/sceneSessionStore'
 
 const STATUS_COLORS: Record<StructuralCheckStatus, string> = {
-  safe: '#2e7d32',
-  warning: '#f9a825',
-  unsafe: '#c62828',
+  safe: '#4caf6d',
+  warning: '#ffb020',
+  unsafe: '#ff5c5c',
 }
 
-const SOURCE_LINK_COLOR = '#4a90d9'
+const SOURCE_LINK_COLOR = '#ff7a1a'
 
 function formatSafetyFactor(safetyFactor: number): string {
   return Number.isFinite(safetyFactor) ? safetyFactor.toFixed(2) : '∞'
@@ -106,9 +106,10 @@ export function Inspector() {
       <div
         style={{
           width: 'min(140px, 34vw)',
-          background: 'rgba(255,255,255,0.96)',
-          border: '1px solid #ccc',
-          borderRadius: 8,
+          background: '#141210',
+          color: '#eae6df',
+          border: '1px solid #2c2822',
+          borderRadius: 10,
           padding: '6px 8px',
           fontSize: 13,
           display: 'flex',
@@ -131,9 +132,10 @@ export function Inspector() {
     <div
       style={{
         width: 'min(200px, 46vw)',
-        background: 'rgba(255,255,255,0.96)',
-        border: '1px solid #ccc',
-        borderRadius: 8,
+        background: '#141210',
+        color: '#eae6df',
+        border: '1px solid #2c2822',
+        borderRadius: 10,
         padding: 10,
         fontSize: 13,
         maxHeight: '70vh',
@@ -194,7 +196,7 @@ export function Inspector() {
               width: 16,
               height: 16,
               background: instance.material,
-              border: '1px solid #999',
+              border: '1px solid #2c2822',
               display: 'inline-block',
               flexShrink: 0,
             }}
@@ -219,7 +221,7 @@ export function Inspector() {
               width: 16,
               height: 16,
               background: instance.material,
-              border: '1px solid #999',
+              border: '1px solid #2c2822',
               display: 'inline-block',
             }}
           />
@@ -261,7 +263,7 @@ export function Inspector() {
               sourceUrl="https://woodgears.ca/joint_strength/"
             />
           )}
-          <div style={{ fontSize: 11, color: '#666', marginTop: 6 }}>
+          <div style={{ fontSize: 11, color: '#948d7f', marginTop: 6 }}>
             Estimate only — not a certified structural analysis.
           </div>
         </>
