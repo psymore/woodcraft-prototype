@@ -121,13 +121,24 @@ so this is a clean removal, not a widening/narrowing concern.
   values, rather than leaving them undefined or exempting them from
   the rule.
 - **Component definitions** each get an explicit `defaultSpeciesId`:
-  - `pullup_bar`, `round_rod`, `foot` → `'red_oak'` (matches today's
-    de facto default — no behavior change for existing scenes/tests
-    that don't touch species).
+  - `pullup_bar`, `foot` → `'red_oak'` (matches today's de facto
+    default — no behavior change for existing scenes/tests that don't
+    touch species).
+  - `round_rod` → `'yellow_birch'` **(corrected in final review — see
+    below; originally spec'd as `'red_oak'`, which was wrong)**.
   - `board`, `square_beam`, `vertical_post` → `'douglas_fir'`
     (construction-lumber-style defaults, matching this app's existing
     "2×4 board" dimension defaults).
   - `l_bracket`, `wood_screw` → `null`.
+
+**Amendment (found in final review):** `round_rod`'s `defaultSpeciesId`
+was originally spec'd as `'red_oak'` under the "no behavior change"
+rationale above — but that was computed wrong. `round_rod`'s actual
+pre-existing `material` (`#c9a273`) is `yellow_birch`'s color (see the
+species table above, which already noted `#c9a273` as "existing
+round_rod color" against `yellow_birch`, not `red_oak`), not
+`red_oak`'s (`#a6693f`). `'yellow_birch'` is what actually achieves "no
+behavior change" for this component, and is what's implemented.
 - **`sceneSessionStore.ts`**: new action `changeSpecies(id: string, speciesId: string)` — looks up `getSpecies(speciesId)`, and in one `set` call updates both `instance.speciesId` and `instance.material` (to the species' `color`). A no-op (returns unchanged state) if the id isn't found, matching this file's existing not-found guards elsewhere (e.g. `movePiece`'s `if (!moving) return state`).
 - **`Inspector.tsx`**: the existing `checkPullupBarBending` call sources `bendingStrength` from `getSpecies(instance.speciesId)?.bendingStrength` instead of `definition.structuralProperties.bendingStrength`. If that's `undefined` (species not found — shouldn't happen given every WOOD instance gets a `defaultSpeciesId` at spawn, but the check stays defensive), the bending row doesn't render, same as today's `bendingStrength !== undefined` gate.
 
