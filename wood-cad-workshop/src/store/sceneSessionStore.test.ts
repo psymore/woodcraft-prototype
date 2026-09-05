@@ -18,6 +18,7 @@ function rodDefinition(): ComponentDefinition {
     connectionRole: 'ends',
     structuralProperties: {},
     explodeDirection: null,
+    defaultSpeciesId: null,
   }
 }
 

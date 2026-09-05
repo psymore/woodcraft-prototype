@@ -11,6 +11,7 @@ export const SQUARE_BEAM_DEFINITION: ComponentDefinition = {
   connectionRole: 'ends',
   structuralProperties: {},
   explodeDirection: null,
+  defaultSpeciesId: 'douglas_fir',
 }
 
 registerComponent(SQUARE_BEAM_DEFINITION)

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { getComponent, checkPullupBarBending, checkPullupBarConnection, type StructuralCheckStatus } from '../engine'
+import { getComponent, checkPullupBarConnection, type StructuralCheckStatus } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
 
 const STATUS_COLORS: Record<StructuralCheckStatus, string> = {
@@ -85,19 +85,10 @@ export function Inspector() {
   }
 
   const isPullupBar = instance.componentDefinitionId === 'pullup_bar'
-  const { bendingStrength, connectionCapacity } = definition.structuralProperties
-  const bendingResult =
-    isPullupBar && bendingStrength !== undefined
-      ? checkPullupBarBending({
-          diameterIn: instance.dimensions.diameter,
-          lengthIn: instance.dimensions.length,
-          userWeightKg,
-          bendingStrength,
-        })
-      : null
+  const { connectionCapacity } = definition.structuralProperties
   const connectionResult =
     isPullupBar && connectionCapacity !== undefined ? checkPullupBarConnection({ userWeightKg, connectionCapacity }) : null
-  const showStructuralSection = bendingResult !== null || connectionResult !== null
+  const showStructuralSection = connectionResult !== null
 
   if (collapsed) {
     return (
@@ -214,15 +205,7 @@ export function Inspector() {
               style={{ width: 80, minHeight: 44 }}
             />
           </label>
-          {bendingResult && (
-            <StructuralResultRow
-              label="Bending safety factor"
-              status={bendingResult.status}
-              safetyFactor={bendingResult.safetyFactor}
-              sourceLabel="red oak, USDA Wood Handbook"
-              sourceUrl="https://www.fpl.fs.usda.gov/documnts/fplgtr/fplgtr190/chapter_05.pdf"
-            />
-          )}
+          {/* bendingResult deferred to Task 6 when species-based strength is available */}
           {connectionResult && (
             <StructuralResultRow
               label="Connection safety factor"

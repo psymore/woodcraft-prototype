@@ -14,6 +14,7 @@ function boardDefinition(): ComponentDefinition {
     connectionRole: 'ends',
     structuralProperties: {},
     explodeDirection: null,
+    defaultSpeciesId: null,
   }
 }
 
@@ -28,6 +29,7 @@ function rodDefinition(): ComponentDefinition {
     connectionRole: 'ends',
     structuralProperties: {},
     explodeDirection: null,
+    defaultSpeciesId: null,
   }
 }
 

@@ -11,6 +11,7 @@ export const FOOT_DEFINITION: ComponentDefinition = {
   connectionRole: 'single',
   structuralProperties: {},
   explodeDirection: null,
+  defaultSpeciesId: 'red_oak',
 }
 
 registerComponent(FOOT_DEFINITION)

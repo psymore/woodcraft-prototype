@@ -11,6 +11,7 @@ export const WOOD_SCREW_DEFINITION: ComponentDefinition = {
   connectionRole: 'none',
   structuralProperties: {},
   explodeDirection: null,
+  defaultSpeciesId: null,
 }
 
 registerComponent(WOOD_SCREW_DEFINITION)

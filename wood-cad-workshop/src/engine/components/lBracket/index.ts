@@ -11,6 +11,7 @@ export const L_BRACKET_DEFINITION: ComponentDefinition = {
   connectionRole: 'single',
   structuralProperties: {},
   explodeDirection: null,
+  defaultSpeciesId: null,
 }
 
 registerComponent(L_BRACKET_DEFINITION)

@@ -13,7 +13,6 @@ export type Dimensions = Record<string, number>
 export type ConnectionRole = 'ends' | 'single' | 'none'
 
 export interface StructuralProperties {
-  bendingStrength?: number // MOR (modulus of rupture), in Pa — nominal bending strength used by the structural check
   connectionCapacity?: number // nominal end-connection shear/pull-apart capacity, in N — see structuralCheck.ts's checkPullupBarConnection
 }
 
@@ -27,6 +26,7 @@ export interface ComponentDefinition {
   connectionRole: ConnectionRole
   structuralProperties: StructuralProperties
   explodeDirection: null
+  defaultSpeciesId: string | null // a species id (see species.ts) for WOOD components, null otherwise — explicit on every definition, like explodeDirection
 }
 
 export interface ComponentInstance {
@@ -36,6 +36,7 @@ export interface ComponentInstance {
   rotation: [number, number, number]
   dimensions: Dimensions
   material: string
+  speciesId?: string // present only on WOOD-category instances — see species.ts
 }
 
 export interface AnchorRef {

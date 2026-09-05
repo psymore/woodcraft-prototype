@@ -11,6 +11,7 @@ export const VERTICAL_POST_DEFINITION: ComponentDefinition = {
   connectionRole: 'ends',
   structuralProperties: {},
   explodeDirection: null,
+  defaultSpeciesId: 'douglas_fir',
 }
 
 registerComponent(VERTICAL_POST_DEFINITION)
