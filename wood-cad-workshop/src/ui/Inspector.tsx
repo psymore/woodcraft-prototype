@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { getComponent, checkPullupBarConnection, type StructuralCheckStatus } from '../engine'
+import { getComponent, checkPullupBarBending, checkPullupBarConnection, getSpecies, SPECIES_LIST, type StructuralCheckStatus } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
 
 const STATUS_COLORS: Record<StructuralCheckStatus, string> = {
@@ -66,6 +66,7 @@ export function Inspector() {
   const instance = useSceneSession((s) => s.instances.find((i) => i.id === s.selectedId) ?? null)
   const changeDimensions = useSceneSession((s) => s.changeDimensions)
   const movePiece = useSceneSession((s) => s.movePiece)
+  const changeSpecies = useSceneSession((s) => s.changeSpecies)
   const [userWeightKg, setUserWeightKg] = useState(80)
   const [collapsed, setCollapsed] = useState(false)
 
@@ -86,9 +87,19 @@ export function Inspector() {
 
   const isPullupBar = instance.componentDefinitionId === 'pullup_bar'
   const { connectionCapacity } = definition.structuralProperties
+  const species = getSpecies(instance.speciesId)
+  const bendingResult =
+    isPullupBar && species !== undefined
+      ? checkPullupBarBending({
+          diameterIn: instance.dimensions.diameter,
+          lengthIn: instance.dimensions.length,
+          userWeightKg,
+          bendingStrength: species.bendingStrength,
+        })
+      : null
   const connectionResult =
     isPullupBar && connectionCapacity !== undefined ? checkPullupBarConnection({ userWeightKg, connectionCapacity }) : null
-  const showStructuralSection = connectionResult !== null
+  const showStructuralSection = bendingResult !== null || connectionResult !== null
 
   if (collapsed) {
     return (
@@ -176,18 +187,40 @@ export function Inspector() {
       </div>
 
       <div style={{ fontWeight: 'bold', marginTop: 8 }}>Material</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span
-          style={{
-            width: 16,
-            height: 16,
-            background: instance.material,
-            border: '1px solid #999',
-            display: 'inline-block',
-          }}
-        />
-        {instance.material}
-      </div>
+      {definition.category === 'WOOD' ? (
+        <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+          <span
+            style={{
+              width: 16,
+              height: 16,
+              background: instance.material,
+              border: '1px solid #999',
+              display: 'inline-block',
+              flexShrink: 0,
+            }}
+          />
+          <select value={instance.speciesId ?? ''} onChange={(e) => changeSpecies(instance.id, e.target.value)} style={{ minHeight: 44 }}>
+            {SPECIES_LIST.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span
+            style={{
+              width: 16,
+              height: 16,
+              background: instance.material,
+              border: '1px solid #999',
+              display: 'inline-block',
+            }}
+          />
+          {instance.material}
+        </div>
+      )}
 
       {showStructuralSection && (
         <>
@@ -205,7 +238,15 @@ export function Inspector() {
               style={{ width: 80, minHeight: 44 }}
             />
           </label>
-          {/* bendingResult deferred to Task 6 when species-based strength is available */}
+          {bendingResult && species && (
+            <StructuralResultRow
+              label="Bending safety factor"
+              status={bendingResult.status}
+              safetyFactor={bendingResult.safetyFactor}
+              sourceLabel={species.sourceLabel}
+              sourceUrl={species.sourceUrl}
+            />
+          )}
           {connectionResult && (
             <StructuralResultRow
               label="Connection safety factor"
