@@ -12,6 +12,7 @@ import {
   getAnchors,
   getComponent,
   getConnectedPieceIds,
+  getSpecies,
   isAnchorClaimable,
   pruneStaleConnections,
   SNAP_DISTANCE,
@@ -54,6 +55,7 @@ interface SceneSessionState {
   duplicateSelected: () => void
   deleteSelected: () => void
   changeDimensions: (id: string, dimensions: Dimensions) => void
+  changeSpecies: (id: string, speciesId: string) => void
   toggleInventory: () => void
   setExplodeAmount: (amount: number) => void
   setDraggingPiece: (dragging: boolean) => void
@@ -335,6 +337,15 @@ export function createSceneSessionStore() {
       set((state) => {
         const instances = state.instances.map((i) => (i.id === id ? { ...i, dimensions } : i))
         return { instances, connections: pruneStaleConnections(instances, state.connections, SNAP_DISTANCE) }
+      }),
+
+    changeSpecies: (id, speciesId) =>
+      set((state) => {
+        const species = getSpecies(speciesId)
+        if (!species) return state
+        return {
+          instances: state.instances.map((i) => (i.id === id ? { ...i, speciesId, material: species.color } : i)),
+        }
       }),
 
     toggleInventory: () => set((state) => ({ inventoryOpen: !state.inventoryOpen })),

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { registerComponent, clearRegistry } from '../engine/registry/registry'
-import { SNAP_DISTANCE } from '../engine'
+import { SNAP_DISTANCE, getSpecies } from '../engine'
 import type { ComponentDefinition, ComponentInstance, Connection } from '../engine'
 import { createSceneSessionStore } from './sceneSessionStore'
 
@@ -229,5 +229,30 @@ describe('movePiece — blockedConnectionHint', () => {
 
     store.getState().setDraggingPiece(false)
     expect(store.getState().blockedConnectionHint).toBeNull()
+  })
+})
+
+describe('changeSpecies', () => {
+  it('updates both speciesId and material together for a known species', () => {
+    const r1 = rod('r1', [0, 0, 0])
+    const store = createSceneSessionStore()
+    store.setState({ instances: [r1] })
+
+    store.getState().changeSpecies('r1', 'sugar_maple')
+
+    const updated = store.getState().instances.find((i) => i.id === 'r1')
+    expect(updated?.speciesId).toBe('sugar_maple')
+    expect(updated?.material).toBe(getSpecies('sugar_maple')!.color)
+  })
+
+  it('leaves state unchanged for an unknown species id', () => {
+    const r1 = rod('r1', [0, 0, 0])
+    const store = createSceneSessionStore()
+    store.setState({ instances: [r1] })
+    const before = store.getState().instances
+
+    store.getState().changeSpecies('r1', 'unobtainium')
+
+    expect(store.getState().instances).toBe(before)
   })
 })
