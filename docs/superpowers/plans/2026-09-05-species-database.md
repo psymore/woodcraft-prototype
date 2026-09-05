@@ -759,12 +759,14 @@ git commit -m "feat(wood-cad-workshop): add changeSpecies store action"
 
 No new automated test — `Inspector.tsx` is UI, left untested per this project's established convention (see `docs/superpowers/specs/2026-08-25-wood-cad-workshop-structural-check-design.md`'s own Testing section, which does the same for this file). Verified via `tsc -b` plus the manual/Playwright smoke test in Step 5 below.
 
+**Note (added after Task 2 landed):** Task 2's implementer found that removing `bendingStrength` from `StructuralProperties` broke `Inspector.tsx`'s compile (it wasn't in Task 2's original file list — a plan gap, ruled on and recorded in this plan's SDD ledger) and fixed it minimally: removed the `checkPullupBarBending` import and the `bendingResult` computation/rendering entirely, leaving a placeholder comment `{/* bendingResult deferred to Task 6 when species-based strength is available */}` where the row used to render. The Steps below are written against that current baseline, not the original pre-Task-2 file.
+
 - [ ] **Step 1: Update imports**
 
 Change:
 
 ```tsx
-import { getComponent, checkPullupBarBending, checkPullupBarConnection, type StructuralCheckStatus } from '../engine'
+import { getComponent, checkPullupBarConnection, type StructuralCheckStatus } from '../engine'
 ```
 
 to:
@@ -785,19 +787,10 @@ Change:
 
 ```tsx
   const isPullupBar = instance.componentDefinitionId === 'pullup_bar'
-  const { bendingStrength, connectionCapacity } = definition.structuralProperties
-  const bendingResult =
-    isPullupBar && bendingStrength !== undefined
-      ? checkPullupBarBending({
-          diameterIn: instance.dimensions.diameter,
-          lengthIn: instance.dimensions.length,
-          userWeightKg,
-          bendingStrength,
-        })
-      : null
+  const { connectionCapacity } = definition.structuralProperties
   const connectionResult =
     isPullupBar && connectionCapacity !== undefined ? checkPullupBarConnection({ userWeightKg, connectionCapacity }) : null
-  const showStructuralSection = bendingResult !== null || connectionResult !== null
+  const showStructuralSection = connectionResult !== null
 ```
 
 to:
@@ -880,20 +873,12 @@ to:
       )}
 ```
 
-- [ ] **Step 4: Make the bending citation dynamic**
+- [ ] **Step 4: Restore the bending result row with a dynamic citation**
 
-Change:
+Change the placeholder comment Task 2 left behind:
 
 ```tsx
-          {bendingResult && (
-            <StructuralResultRow
-              label="Bending safety factor"
-              status={bendingResult.status}
-              safetyFactor={bendingResult.safetyFactor}
-              sourceLabel="red oak, USDA Wood Handbook"
-              sourceUrl="https://www.fpl.fs.usda.gov/documnts/fplgtr/fplgtr190/chapter_05.pdf"
-            />
-          )}
+          {/* bendingResult deferred to Task 6 when species-based strength is available */}
 ```
 
 to:
