@@ -4,6 +4,7 @@
   --wc-panel: #141210;
   --wc-panel-alt: #171512;
   --wc-border: #2c2822;
+  --wc-border-button: #57503f;
   --wc-text: #eae6df;
   --wc-muted: #948d7f;
   --wc-accent: #ff7a1a;
@@ -37,7 +38,7 @@ button {
   appearance: none;
   background: var(--wc-panel);
   color: var(--wc-text);
-  border: 1px solid var(--wc-border);
+  border: 1px solid var(--wc-border-button);
   border-radius: var(--wc-radius-sm);
   font-family: var(--wc-font-ui);
   font-size: 13px;

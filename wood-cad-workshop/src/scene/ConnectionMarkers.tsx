@@ -16,7 +16,7 @@ import { useSceneSession } from '../store/sceneSessionStore'
 // Candidate orb. Small enough that the preview line (below) can visibly
 // protrude past it at the maximum candidate gap (SNAP_DISTANCE/2 = 0.35 >
 // this radius), while still being a comfortable tap target.
-const CANDIDATE_MARKER_RADIUS = 0.25
+const CANDIDATE_MARKER_RADIUS = 0.32
 // Candidate preview line — thinner than the orb, a secondary visual cue
 // showing the two anchors about to snap together.
 const LINE_RADIUS = 0.08
@@ -142,9 +142,15 @@ export function ConnectionMarkers() {
                 <meshStandardMaterial color={color} />
               </mesh>
             )}
-            <mesh position={midpoint} onPointerDown={stop} onClick={onConfirm}>
+            <mesh position={midpoint} renderOrder={1} onPointerDown={stop} onClick={onConfirm}>
               <sphereGeometry args={[CANDIDATE_MARKER_RADIUS, 12, 12]} />
-              <meshStandardMaterial color={color} />
+              {/* depthTest off, same X-ray technique as AnchorMarkers.tsx:
+                  on overlapping/nested pieces this orb can end up buried
+                  inside another piece's geometry, making it hard to spot
+                  or tap — this keeps it visible (and still clickable,
+                  since raycast is unaffected by depthTest) regardless of
+                  what's in front of it. */}
+              <meshStandardMaterial color={color} depthTest={false} />
             </mesh>
           </group>
         )

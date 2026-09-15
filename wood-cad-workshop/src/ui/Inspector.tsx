@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { getComponent, checkPullupBarBending, checkPullupBarConnection, getSpecies, SPECIES_LIST, type StructuralCheckStatus } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
 
@@ -68,7 +68,16 @@ export function Inspector() {
   const movePiece = useSceneSession((s) => s.movePiece)
   const changeSpecies = useSceneSession((s) => s.changeSpecies)
   const [userWeightKg, setUserWeightKg] = useState(80)
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
+
+  // Reset to collapsed on every new selection so pressing a piece never
+  // pops the full dimension panel open unasked — only re-expanding it
+  // (the ⤢ button below) does. Keyed on selectedId, not a mount-only
+  // default, so this also applies when switching between pieces without
+  // ever deselecting.
+  useEffect(() => {
+    setCollapsed(true)
+  }, [selectedId])
 
   if (!selectedId || !instance) return null
   const definition = getComponent(instance.componentDefinitionId)
