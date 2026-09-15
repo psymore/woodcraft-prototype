@@ -22,6 +22,10 @@ import {
 interface SceneSessionState {
   instances: ComponentInstance[]
   selectedId: string | null
+  // A piece and a connection are never selected at once — selectPiece and
+  // selectConnection each clear the other's selection, so the Inspector
+  // only ever has one panel to choose between.
+  selectedConnectionId: string | null
   inventoryOpen: boolean
   explodeAmount: number
   isDraggingPiece: boolean
@@ -44,11 +48,15 @@ interface SceneSessionState {
   blockedConnectionHint: string | null
 
   selectPiece: (id: string | null) => void
+  selectConnection: (id: string | null) => void
   addComponent: (definition: ComponentDefinition) => void
   addPullupKit: () => void
   movePiece: (id: string, position: [number, number, number]) => void
   confirmConnection: (candidate: ConnectionCandidate) => void
   detachConnection: (connectionId: string) => void
+  attachHardware: (connectionId: string, pieceId: string) => void
+  detachHardware: (connectionId: string, pieceId: string) => void
+  toggleGlue: (connectionId: string) => void
   setRotation: (id: string, rotation: [number, number, number]) => void
   rotateSelected: () => void
   standSelectedUp: () => void
@@ -73,6 +81,7 @@ export function createSceneSessionStore() {
   return create<SceneSessionState>((set, get) => ({
     instances: createSeedInstances(),
     selectedId: null,
+    selectedConnectionId: null,
     inventoryOpen: false,
     explodeAmount: 0,
     isDraggingPiece: false,
@@ -82,7 +91,9 @@ export function createSceneSessionStore() {
     showConnectionPoints: false,
     blockedConnectionHint: null,
 
-    selectPiece: (id) => set({ selectedId: id }),
+    selectPiece: (id) => set({ selectedId: id, selectedConnectionId: null }),
+
+    selectConnection: (id) => set({ selectedConnectionId: id, selectedId: null }),
 
     addComponent: (definition) =>
       set((state) => ({ instances: [...state.instances, createInstance(definition)] })),
@@ -259,6 +270,35 @@ export function createSceneSessionStore() {
     detachConnection: (connectionId) =>
       set((state) => ({
         connections: state.connections.filter((c) => c.id !== connectionId),
+        selectedConnectionId: state.selectedConnectionId === connectionId ? null : state.selectedConnectionId,
+      })),
+
+    // Links a freestanding HARDWARE/FASTENER instance to this connection.
+    // No-ops if the piece is already linked to any connection (a physical
+    // bracket/screw reinforces one joint, not several) — the Inspector's
+    // picker is expected to only offer unlinked pieces, this is a
+    // defensive guard against a stale click.
+    attachHardware: (connectionId, pieceId) =>
+      set((state) => {
+        const alreadyLinked = state.connections.some((c) => c.hardwarePieceIds?.includes(pieceId))
+        if (alreadyLinked) return state
+        return {
+          connections: state.connections.map((c) =>
+            c.id === connectionId ? { ...c, hardwarePieceIds: [...(c.hardwarePieceIds ?? []), pieceId] } : c,
+          ),
+        }
+      }),
+
+    detachHardware: (connectionId, pieceId) =>
+      set((state) => ({
+        connections: state.connections.map((c) =>
+          c.id === connectionId ? { ...c, hardwarePieceIds: (c.hardwarePieceIds ?? []).filter((id) => id !== pieceId) } : c,
+        ),
+      })),
+
+    toggleGlue: (connectionId) =>
+      set((state) => ({
+        connections: state.connections.map((c) => (c.id === connectionId ? { ...c, glued: !c.glued } : c)),
       })),
 
     setRotation: (id, rotation) =>
@@ -327,9 +367,13 @@ export function createSceneSessionStore() {
     deleteSelected: () =>
       set((state) => ({
         instances: state.instances.filter((i) => i.id !== state.selectedId),
-        connections: state.connections.filter(
-          (c) => c.pieceAId !== state.selectedId && c.pieceBId !== state.selectedId,
-        ),
+        connections: state.connections
+          .filter((c) => c.pieceAId !== state.selectedId && c.pieceBId !== state.selectedId)
+          .map((c) =>
+            c.hardwarePieceIds?.includes(state.selectedId!)
+              ? { ...c, hardwarePieceIds: c.hardwarePieceIds.filter((id) => id !== state.selectedId) }
+              : c,
+          ),
         selectedId: null,
       })),
 

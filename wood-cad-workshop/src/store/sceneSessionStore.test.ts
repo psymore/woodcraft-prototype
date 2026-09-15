@@ -256,3 +256,111 @@ describe('changeSpecies', () => {
     expect(store.getState().instances).toBe(before)
   })
 })
+
+describe('selection — piece vs connection are mutually exclusive', () => {
+  it('selectConnection clears any selected piece', () => {
+    const store = createSceneSessionStore()
+    store.setState({ selectedId: 'r1' })
+
+    store.getState().selectConnection('c1')
+
+    expect(store.getState().selectedConnectionId).toBe('c1')
+    expect(store.getState().selectedId).toBeNull()
+  })
+
+  it('selectPiece clears any selected connection', () => {
+    const store = createSceneSessionStore()
+    store.setState({ selectedConnectionId: 'c1' })
+
+    store.getState().selectPiece('r1')
+
+    expect(store.getState().selectedId).toBe('r1')
+    expect(store.getState().selectedConnectionId).toBeNull()
+  })
+})
+
+describe('attachHardware / detachHardware', () => {
+  function baseConnection(): Connection {
+    return { id: 'c1', pieceAId: 'r1', pieceBId: 'r2', a: { anchorIndex: 1 }, b: { anchorIndex: 0 } }
+  }
+
+  it('links a hardware piece to a connection', () => {
+    const store = createSceneSessionStore()
+    store.setState({ connections: [baseConnection()] })
+
+    store.getState().attachHardware('c1', 'bracket1')
+
+    expect(store.getState().connections[0].hardwarePieceIds).toEqual(['bracket1'])
+  })
+
+  it('does not link a hardware piece already linked to another connection', () => {
+    const c1 = baseConnection()
+    const c2: Connection = { id: 'c2', pieceAId: 'r3', pieceBId: 'r4', a: { anchorIndex: 1 }, b: { anchorIndex: 0 } }
+    const store = createSceneSessionStore()
+    store.setState({ connections: [c1, c2] })
+
+    store.getState().attachHardware('c1', 'bracket1')
+    store.getState().attachHardware('c2', 'bracket1')
+
+    expect(store.getState().connections.find((c) => c.id === 'c1')?.hardwarePieceIds).toEqual(['bracket1'])
+    expect(store.getState().connections.find((c) => c.id === 'c2')?.hardwarePieceIds ?? []).toEqual([])
+  })
+
+  it('detachHardware removes the link without affecting other attached hardware', () => {
+    const store = createSceneSessionStore()
+    store.setState({ connections: [{ ...baseConnection(), hardwarePieceIds: ['bracket1', 'screw1'] }] })
+
+    store.getState().detachHardware('c1', 'bracket1')
+
+    expect(store.getState().connections[0].hardwarePieceIds).toEqual(['screw1'])
+  })
+})
+
+describe('toggleGlue', () => {
+  it('flips glued from undefined to true and back to false', () => {
+    const connection: Connection = { id: 'c1', pieceAId: 'r1', pieceBId: 'r2', a: { anchorIndex: 1 }, b: { anchorIndex: 0 } }
+    const store = createSceneSessionStore()
+    store.setState({ connections: [connection] })
+
+    store.getState().toggleGlue('c1')
+    expect(store.getState().connections[0].glued).toBe(true)
+
+    store.getState().toggleGlue('c1')
+    expect(store.getState().connections[0].glued).toBe(false)
+  })
+})
+
+describe('detachConnection', () => {
+  it('clears selectedConnectionId when detaching the currently selected connection', () => {
+    const connection: Connection = { id: 'c1', pieceAId: 'r1', pieceBId: 'r2', a: { anchorIndex: 1 }, b: { anchorIndex: 0 } }
+    const store = createSceneSessionStore()
+    store.setState({ connections: [connection], selectedConnectionId: 'c1' })
+
+    store.getState().detachConnection('c1')
+
+    expect(store.getState().connections).toHaveLength(0)
+    expect(store.getState().selectedConnectionId).toBeNull()
+  })
+})
+
+describe('deleteSelected — hardware link cleanup', () => {
+  it('strips a deleted piece from any connection it was linked to as hardware', () => {
+    const r1 = rod('r1', [0, 0, 0])
+    const bracket = rod('bracket1', [100, 0, 0]) // position irrelevant — deletion cleanup only
+    const connection: Connection = {
+      id: 'c1',
+      pieceAId: 'r1',
+      pieceBId: 'r2',
+      a: { anchorIndex: 1 },
+      b: { anchorIndex: 0 },
+      hardwarePieceIds: ['bracket1'],
+    }
+    const store = createSceneSessionStore()
+    store.setState({ instances: [r1, bracket], connections: [connection], selectedId: 'bracket1' })
+
+    store.getState().deleteSelected()
+
+    expect(store.getState().connections[0].hardwarePieceIds).toEqual([])
+    expect(store.getState().instances.find((i) => i.id === 'bracket1')).toBeUndefined()
+  })
+})

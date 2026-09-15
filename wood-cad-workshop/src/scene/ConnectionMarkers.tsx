@@ -1,4 +1,3 @@
-import { useRef } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
 import {
@@ -26,6 +25,13 @@ const LINE_RADIUS = 0.08
 const PIN_RADIUS = 0.25
 const PIN_LENGTH = 1.5
 const CONNECTED_COLOR = '#d9342b'
+const SELECTED_CONNECTED_COLOR = '#ff7a1a'
+// Glow halo multiplier/opacity shared by the candidate orb and the
+// confirmed pin — same cheap additive-blended, no-depth-write technique as
+// AnchorMarkers.tsx's connection-point dots, color-matched per marker
+// rather than a single fixed glow color.
+const GLOW_RADIUS_SCALE = 1.6
+const GLOW_OPACITY = 0.3
 
 // Candidate color by anchor-pair kind — SketchUp-inference-style semantic
 // coding so a candidate's color hints at what kind of joint it would make
@@ -42,14 +48,6 @@ function candidateColor(pieceA: ComponentInstance, aAnchorIndex: number, pieceB:
   const kindB = getAnchors(pieceB)[bAnchorIndex].kind
   return CANDIDATE_COLOR_BY_KIND[classifyAnchorPairKind(kindA, kindB)]
 }
-
-// A fast double-tap confirms then instantly detaches, since the confirm
-// and detach markers can land at the same screen position and React
-// flushes both synchronous clicks before either marker's position
-// updates. This cooldown makes a detach click on a connection ignored if
-// it lands within this many ms of that same connection's own confirm
-// click.
-const DETACH_COOLDOWN_MS = 400
 
 const WORLD_UP = new THREE.Vector3(0, 1, 0)
 
@@ -79,8 +77,8 @@ export function ConnectionMarkers() {
   const connections = useSceneSession((s) => s.connections)
   const explodeAmount = useSceneSession((s) => s.explodeAmount)
   const confirmConnection = useSceneSession((s) => s.confirmConnection)
-  const detachConnection = useSceneSession((s) => s.detachConnection)
-  const justConfirmedAt = useRef<Map<string, number>>(new Map())
+  const selectedConnectionId = useSceneSession((s) => s.selectedConnectionId)
+  const selectConnection = useSceneSession((s) => s.selectConnection)
 
   if (explodeAmount > 0) return null
 
@@ -130,8 +128,6 @@ export function ConnectionMarkers() {
         const color = candidateColor(pieceA, candidate.a.anchorIndex, pieceB, candidate.b.anchorIndex)
         const onConfirm = (e: ThreeEvent<MouseEvent>) => {
           stop(e)
-          const connectionId = `conn-${candidate.pieceAId}-${candidate.pieceBId}-${candidate.a.anchorIndex}-${candidate.b.anchorIndex}`
-          justConfirmedAt.current.set(connectionId, Date.now())
           confirmConnection(candidate)
         }
         return (
@@ -142,7 +138,13 @@ export function ConnectionMarkers() {
                 <meshStandardMaterial color={color} />
               </mesh>
             )}
-            <mesh position={midpoint} renderOrder={1} onPointerDown={stop} onClick={onConfirm}>
+            {/* Glow halo — additive, non-interactive, drawn just behind the
+                solid orb below. */}
+            <mesh position={midpoint} raycast={() => null} renderOrder={1}>
+              <sphereGeometry args={[CANDIDATE_MARKER_RADIUS * GLOW_RADIUS_SCALE, 12, 12]} />
+              <meshBasicMaterial color={color} transparent opacity={GLOW_OPACITY} blending={THREE.AdditiveBlending} depthWrite={false} depthTest={false} />
+            </mesh>
+            <mesh position={midpoint} renderOrder={2} onPointerDown={stop} onClick={onConfirm}>
               <sphereGeometry args={[CANDIDATE_MARKER_RADIUS, 12, 12]} />
               {/* depthTest off, same X-ray technique as AnchorMarkers.tsx:
                   on overlapping/nested pieces this orb can end up buried
@@ -176,17 +178,26 @@ export function ConnectionMarkers() {
           joint[2] + direction[2] * PIN_LENGTH,
         ]
         const pin = segmentTransform(joint, tip)
-        const onDetach = (e: ThreeEvent<MouseEvent>) => {
+        const isSelected = connection.id === selectedConnectionId
+        const pinRadius = isSelected ? PIN_RADIUS * 1.25 : PIN_RADIUS
+        const pinColor = isSelected ? SELECTED_CONNECTED_COLOR : CONNECTED_COLOR
+        const onSelect = (e: ThreeEvent<MouseEvent>) => {
           stop(e)
-          const confirmedAt = justConfirmedAt.current.get(connection.id)
-          if (confirmedAt !== undefined && Date.now() - confirmedAt < DETACH_COOLDOWN_MS) return
-          detachConnection(connection.id)
+          selectConnection(connection.id)
         }
         return (
-          <mesh key={connection.id} position={pin.position} quaternion={pin.quaternion} onPointerDown={stop} onClick={onDetach}>
-            <cylinderGeometry args={[PIN_RADIUS, PIN_RADIUS, PIN_LENGTH, 12]} />
-            <meshStandardMaterial color={CONNECTED_COLOR} />
-          </mesh>
+          <group key={connection.id}>
+            {/* Glow halo — additive, non-interactive, drawn just behind the
+                solid pin below. */}
+            <mesh position={pin.position} quaternion={pin.quaternion} raycast={() => null}>
+              <cylinderGeometry args={[pinRadius * GLOW_RADIUS_SCALE, pinRadius * GLOW_RADIUS_SCALE, PIN_LENGTH, 12]} />
+              <meshBasicMaterial color={pinColor} transparent opacity={GLOW_OPACITY} blending={THREE.AdditiveBlending} depthWrite={false} depthTest={false} />
+            </mesh>
+            <mesh position={pin.position} quaternion={pin.quaternion} onPointerDown={stop} onClick={onSelect}>
+              <cylinderGeometry args={[pinRadius, pinRadius, PIN_LENGTH, 12]} />
+              <meshStandardMaterial color={pinColor} />
+            </mesh>
+          </group>
         )
       })}
     </>

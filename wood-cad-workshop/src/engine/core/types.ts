@@ -54,4 +54,14 @@ export interface Connection {
   pieceBId: string
   a: AnchorRef // anchor on pieceA — index into getAnchors(pieceA)
   b: AnchorRef // anchor on pieceB — index into getAnchors(pieceB)
+  // Freestanding HARDWARE/FASTENER instance ids (e.g. an l_bracket or
+  // wood_screw piece) recorded as reinforcing this joint. Purely a data
+  // link — attaching doesn't move or snap the hardware piece, and doesn't
+  // feed into structuralCheck.ts. A given hardware piece is expected to be
+  // linked to at most one connection at a time (enforced by the store
+  // action, not this type).
+  hardwarePieceIds?: string[]
+  // Whether this joint is glued. Glue has no physical instance (unlike
+  // hardware) — it's a flag, not a placed piece.
+  glued?: boolean
 }

@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react'
-import { getComponent, checkPullupBarBending, checkPullupBarConnection, getSpecies, SPECIES_LIST, type StructuralCheckStatus } from '../engine'
+import {
+  getComponent,
+  checkPullupBarBending,
+  checkPullupBarConnection,
+  getSpecies,
+  SPECIES_LIST,
+  type StructuralCheckStatus,
+  type ComponentInstance,
+  type Connection,
+} from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
 
 const STATUS_COLORS: Record<StructuralCheckStatus, string> = {
@@ -61,8 +70,108 @@ function StructuralResultRow({
   )
 }
 
+// Freestanding HARDWARE/FASTENER pieces available to link to a
+// connection: any such instance not already linked to ANY connection
+// (a physical bracket/screw reinforces one joint at a time — see
+// attachHardware's own no-op guard in sceneSessionStore.ts).
+function unlinkedHardware(instances: ComponentInstance[], connections: Connection[]) {
+  const linkedIds = new Set(connections.flatMap((c) => c.hardwarePieceIds ?? []))
+  return instances.filter((i) => {
+    if (linkedIds.has(i.id)) return false
+    const category = getComponent(i.componentDefinitionId).category
+    return category === 'HARDWARE' || category === 'FASTENER'
+  })
+}
+
+function ConnectionPanel({ connectionId }: { connectionId: string }) {
+  const instances = useSceneSession((s) => s.instances)
+  const connection = useSceneSession((s) => s.connections.find((c) => c.id === connectionId) ?? null)
+  const connections = useSceneSession((s) => s.connections)
+  const selectConnection = useSceneSession((s) => s.selectConnection)
+  const detachConnection = useSceneSession((s) => s.detachConnection)
+  const attachHardware = useSceneSession((s) => s.attachHardware)
+  const detachHardware = useSceneSession((s) => s.detachHardware)
+  const toggleGlue = useSceneSession((s) => s.toggleGlue)
+
+  if (!connection) return null
+
+  const attached = (connection.hardwarePieceIds ?? [])
+    .map((id) => instances.find((i) => i.id === id))
+    .filter((i): i is NonNullable<typeof i> => i !== undefined)
+  const available = unlinkedHardware(instances, connections)
+
+  return (
+    <div
+      style={{
+        width: 'min(200px, 46vw)',
+        background: '#141210',
+        color: '#eae6df',
+        border: '1px solid #2c2822',
+        borderRadius: 10,
+        padding: 10,
+        fontSize: 13,
+        maxHeight: '70vh',
+        overflowY: 'auto',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <span style={{ fontWeight: 'bold' }}>Connection</span>
+        <button onClick={() => selectConnection(null)} style={{ minWidth: 32, minHeight: 32, flexShrink: 0 }}>
+          ▬
+        </button>
+      </div>
+
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+        <input type="checkbox" checked={connection.glued ?? false} onChange={() => toggleGlue(connection.id)} style={{ width: 20, height: 20 }} />
+        <span>Glued</span>
+      </label>
+
+      <div style={{ fontWeight: 'bold', marginTop: 8 }}>Hardware</div>
+      {attached.length === 0 && <div style={{ color: '#948d7f', marginTop: 4 }}>None attached</div>}
+      {attached.map((piece) => (
+        <div key={piece.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+          <span>{getComponent(piece.componentDefinitionId).name}</span>
+          <button onClick={() => detachHardware(connection.id, piece.id)} style={{ minWidth: 32, minHeight: 32 }}>
+            ✕
+          </button>
+        </div>
+      ))}
+      {available.length > 0 && (
+        <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+          <span>Attach</span>
+          <select
+            aria-label="Attach hardware"
+            value=""
+            onChange={(e) => {
+              if (e.target.value) attachHardware(connection.id, e.target.value)
+            }}
+            style={{ minHeight: 44 }}
+          >
+            <option value="" disabled>
+              Choose…
+            </option>
+            {available.map((piece) => (
+              <option key={piece.id} value={piece.id}>
+                {getComponent(piece.componentDefinitionId).name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
+      <button
+        onClick={() => detachConnection(connection.id)}
+        style={{ minWidth: '100%', minHeight: 44, marginTop: 10, color: '#ff5c5c' }}
+      >
+        Detach connection
+      </button>
+    </div>
+  )
+}
+
 export function Inspector() {
   const selectedId = useSceneSession((s) => s.selectedId)
+  const selectedConnectionId = useSceneSession((s) => s.selectedConnectionId)
   const instance = useSceneSession((s) => s.instances.find((i) => i.id === s.selectedId) ?? null)
   const changeDimensions = useSceneSession((s) => s.changeDimensions)
   const movePiece = useSceneSession((s) => s.movePiece)
@@ -78,6 +187,8 @@ export function Inspector() {
   useEffect(() => {
     setCollapsed(true)
   }, [selectedId])
+
+  if (selectedConnectionId) return <ConnectionPanel connectionId={selectedConnectionId} />
 
   if (!selectedId || !instance) return null
   const definition = getComponent(instance.componentDefinitionId)

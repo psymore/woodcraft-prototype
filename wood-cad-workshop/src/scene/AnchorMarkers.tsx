@@ -1,3 +1,4 @@
+import * as THREE from 'three'
 import { getAnchors, pointAtParam, toWorldAnchor } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
 
@@ -7,6 +8,11 @@ import { useSceneSession } from '../store/sceneSessionStore'
 // discoverability aid, not something to tap.
 const ANCHOR_MARKER_RADIUS = 0.12
 const ANCHOR_MARKER_COLOR = '#ffffff'
+// Glow halo — a larger, additively-blended, low-opacity sphere behind the
+// solid dot. Three.js has no built-in per-object glow without a
+// postprocessing bloom pass (which would affect the whole scene); this
+// fakes it cheaply with a second draw call per marker.
+const GLOW_MARKER_RADIUS = 0.28
 
 // Passive markers at every one of the selected piece's own connection
 // points — gated behind sceneSessionStore's showConnectionPoints toggle
@@ -34,17 +40,34 @@ export function AnchorMarkers() {
       {anchors.map((anchor, index) => {
         const position = pointAtParam(toWorldAnchor(instance, anchor))
         return (
-          <mesh key={index} position={position} raycast={() => null} renderOrder={1}>
-            <sphereGeometry args={[ANCHOR_MARKER_RADIUS, 8, 8]} />
-            {/* depthTest off: this is an X-ray discoverability overlay, not
-                a scene object — a point/segment/face anchor on the far or
-                inner side of a solid piece (there are several, by
-                construction — see getAnchors' own comment on shared
-                default positions) must stay visible rather than being
-                silently buried like the ordinary opaque markers in
-                ConnectionMarkers.tsx. */}
-            <meshBasicMaterial color={ANCHOR_MARKER_COLOR} depthTest={false} />
-          </mesh>
+          <group key={index}>
+            {/* Glow halo, drawn behind the solid dot below: additive
+                blending + no depth write so it softly brightens whatever
+                it overlaps (including the dot itself) without occluding
+                anything, same non-interactive/X-ray treatment as the dot. */}
+            <mesh position={position} raycast={() => null} renderOrder={1}>
+              <sphereGeometry args={[GLOW_MARKER_RADIUS, 12, 12]} />
+              <meshBasicMaterial
+                color={ANCHOR_MARKER_COLOR}
+                transparent
+                opacity={0.35}
+                blending={THREE.AdditiveBlending}
+                depthWrite={false}
+                depthTest={false}
+              />
+            </mesh>
+            <mesh position={position} raycast={() => null} renderOrder={2}>
+              <sphereGeometry args={[ANCHOR_MARKER_RADIUS, 8, 8]} />
+              {/* depthTest off: this is an X-ray discoverability overlay, not
+                  a scene object — a point/segment/face anchor on the far or
+                  inner side of a solid piece (there are several, by
+                  construction — see getAnchors' own comment on shared
+                  default positions) must stay visible rather than being
+                  silently buried like the ordinary opaque markers in
+                  ConnectionMarkers.tsx. */}
+              <meshBasicMaterial color={ANCHOR_MARKER_COLOR} depthTest={false} />
+            </mesh>
+          </group>
         )
       })}
     </>
