@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { PanelRightClose, PanelRightOpen, X } from 'lucide-react'
 import {
   getComponent,
   checkPullupBarBending,
@@ -12,12 +13,12 @@ import {
 import { useSceneSession } from '../store/sceneSessionStore'
 
 const STATUS_COLORS: Record<StructuralCheckStatus, string> = {
-  safe: '#4caf6d',
-  warning: '#ffb020',
-  unsafe: '#ff5c5c',
+  safe: 'var(--wc-safe)',
+  warning: 'var(--wc-warn)',
+  unsafe: 'var(--wc-unsafe)',
 }
 
-const SOURCE_LINK_COLOR = '#ff7a1a'
+const SOURCE_LINK_COLOR = 'var(--wc-accent)'
 
 function formatSafetyFactor(safetyFactor: number): string {
   return Number.isFinite(safetyFactor) ? safetyFactor.toFixed(2) : '∞'
@@ -104,9 +105,9 @@ function ConnectionPanel({ connectionId }: { connectionId: string }) {
     <div
       style={{
         width: 'min(200px, 46vw)',
-        background: '#141210',
-        color: '#eae6df',
-        border: '1px solid #2c2822',
+        background: 'var(--wc-panel)',
+        color: 'var(--wc-text)',
+        border: '1px solid var(--wc-border)',
         borderRadius: 10,
         padding: 10,
         fontSize: 13,
@@ -116,8 +117,8 @@ function ConnectionPanel({ connectionId }: { connectionId: string }) {
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <span style={{ fontWeight: 'bold' }}>Connection</span>
-        <button onClick={() => selectConnection(null)} style={{ minWidth: 32, minHeight: 32, flexShrink: 0 }}>
-          ▬
+        <button onClick={() => selectConnection(null)} title="Close" style={{ minWidth: 32, minHeight: 32, flexShrink: 0 }}>
+          <X size={16} />
         </button>
       </div>
 
@@ -127,7 +128,7 @@ function ConnectionPanel({ connectionId }: { connectionId: string }) {
       </label>
 
       <div style={{ fontWeight: 'bold', marginTop: 8 }}>Hardware</div>
-      {attached.length === 0 && <div style={{ color: '#948d7f', marginTop: 4 }}>None attached</div>}
+      {attached.length === 0 && <div style={{ color: 'var(--wc-muted)', marginTop: 4 }}>None attached</div>}
       {attached.map((piece) => (
         <div key={piece.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
           <span>{getComponent(piece.componentDefinitionId).name}</span>
@@ -161,7 +162,7 @@ function ConnectionPanel({ connectionId }: { connectionId: string }) {
 
       <button
         onClick={() => detachConnection(connection.id)}
-        style={{ minWidth: '100%', minHeight: 44, marginTop: 10, color: '#ff5c5c' }}
+        style={{ minWidth: '100%', minHeight: 44, marginTop: 10, color: 'var(--wc-unsafe)' }}
       >
         Detach connection
       </button>
@@ -181,7 +182,7 @@ export function Inspector() {
 
   // Reset to collapsed on every new selection so pressing a piece never
   // pops the full dimension panel open unasked — only re-expanding it
-  // (the ⤢ button below) does. Keyed on selectedId, not a mount-only
+  // (the PanelRightOpen button below) does. Keyed on selectedId, not a mount-only
   // default, so this also applies when switching between pieces without
   // ever deselecting.
   useEffect(() => {
@@ -226,9 +227,9 @@ export function Inspector() {
       <div
         style={{
           width: 'min(140px, 34vw)',
-          background: '#141210',
-          color: '#eae6df',
-          border: '1px solid #2c2822',
+          background: 'var(--wc-panel)',
+          color: 'var(--wc-text)',
+          border: '1px solid var(--wc-border)',
           borderRadius: 10,
           padding: '6px 8px',
           fontSize: 13,
@@ -241,8 +242,8 @@ export function Inspector() {
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {definition.name}
         </span>
-        <button onClick={() => setCollapsed(false)} style={{ minWidth: 32, minHeight: 32, flexShrink: 0 }}>
-          ⤢
+        <button onClick={() => setCollapsed(false)} title="Expand" style={{ minWidth: 32, minHeight: 32, flexShrink: 0 }}>
+          <PanelRightOpen size={16} />
         </button>
       </div>
     )
@@ -252,9 +253,9 @@ export function Inspector() {
     <div
       style={{
         width: 'min(200px, 46vw)',
-        background: '#141210',
-        color: '#eae6df',
-        border: '1px solid #2c2822',
+        background: 'var(--wc-panel)',
+        color: 'var(--wc-text)',
+        border: '1px solid var(--wc-border)',
         borderRadius: 10,
         padding: 10,
         fontSize: 13,
@@ -264,8 +265,8 @@ export function Inspector() {
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <span style={{ fontWeight: 'bold' }}>{definition.name}</span>
-        <button onClick={() => setCollapsed(true)} style={{ minWidth: 32, minHeight: 32, flexShrink: 0 }}>
-          ▬
+        <button onClick={() => setCollapsed(true)} title="Collapse" style={{ minWidth: 32, minHeight: 32, flexShrink: 0 }}>
+          <PanelRightClose size={16} />
         </button>
       </div>
 
@@ -316,7 +317,7 @@ export function Inspector() {
               width: 16,
               height: 16,
               background: instance.material,
-              border: '1px solid #2c2822',
+              border: '1px solid var(--wc-border)',
               display: 'inline-block',
               flexShrink: 0,
             }}
@@ -341,7 +342,7 @@ export function Inspector() {
               width: 16,
               height: 16,
               background: instance.material,
-              border: '1px solid #2c2822',
+              border: '1px solid var(--wc-border)',
               display: 'inline-block',
             }}
           />
@@ -383,7 +384,7 @@ export function Inspector() {
               sourceUrl="https://woodgears.ca/joint_strength/"
             />
           )}
-          <div style={{ fontSize: 11, color: '#948d7f', marginTop: 6 }}>
+          <div style={{ fontSize: 11, color: 'var(--wc-muted)', marginTop: 6 }}>
             Estimate only — not a certified structural analysis.
           </div>
         </>

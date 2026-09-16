@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import type { ComponentRef, PointerEvent as ReactPointerEvent } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
@@ -9,6 +9,9 @@ import { InventorySheet } from './ui/Inventory'
 import { Inspector } from './ui/Inspector'
 import { GizmoToggles } from './ui/GizmoToggles'
 import { ConnectionHint } from './ui/ConnectionHint'
+import { ThemeToggle } from './ui/ThemeToggle'
+import { readTheme, writeTheme } from './ui/theme'
+import type { Theme } from './ui/theme'
 import { getViewPreset, computeInstanceBounds } from './engine'
 import type { ComponentInstance, ViewName } from './engine'
 import { useSceneSession } from './store/sceneSessionStore'
@@ -18,6 +21,23 @@ function App() {
   const instances = useSceneSession((s) => s.instances)
   const selectedId = useSceneSession((s) => s.selectedId)
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null)
+  const [theme, setTheme] = useState<Theme>(readTheme)
+
+  // Reflected onto <html> (not just a component-local class) so the
+  // data-theme selector in index.css can override :root's own custom
+  // properties — every panel already reads those vars, so this one
+  // attribute is what actually flips the whole app's look.
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
+
+  const toggleTheme = () => {
+    setTheme((prev) => {
+      const next: Theme = prev === 'dark' ? 'light' : 'dark'
+      writeTheme(next)
+      return next
+    })
+  }
 
   // A piece-drag captures one finger's pointer events, which would otherwise
   // keep OrbitControls disabled (see `enabled={!isDraggingPiece}` below) even
@@ -82,6 +102,19 @@ function App() {
     if (selected) frame([selected])
   }
 
+  // The initial camera position below is a fixed guess, unrelated to what's
+  // actually loaded — a long piece can start tiny/off-center, making the
+  // first orbit gesture harder than it should be. Frame to the real bounds
+  // once, the first time there's something to frame, instead of relying on
+  // that fixed position as the default view. Runs only once (not on every
+  // instances change) so it doesn't fight a user's manual zoom/pan mid-session.
+  const hasFramedInitialViewRef = useRef(false)
+  useEffect(() => {
+    if (hasFramedInitialViewRef.current || instances.length === 0) return
+    frame(instances)
+    hasFramedInitialViewRef.current = true
+  }, [instances])
+
   // OrbitControls computes its internal up-alignment quaternion once, in its
   // constructor, from camera.up — it never recomputes it afterward. If a
   // TOP/BOTTOM preset click left camera.up at (0,0,-1)/(0,0,1), a later
@@ -104,7 +137,11 @@ function App() {
       onPointerCancelCapture={handlePointerUpCapture}
     >
       <Canvas camera={{ position: [0, 20, 25], fov: 50, near: 0.5, far: 500 }}>
-        <Scene multiTouchActiveRef={multiTouchActiveRef} />
+        {/* Piece.tsx's useTexture (wood PBR maps) suspends while loading —
+            without a boundary here that throws all the way past Canvas. */}
+        <Suspense fallback={null}>
+          <Scene multiTouchActiveRef={multiTouchActiveRef} />
+        </Suspense>
         <OrbitControls
           ref={controlsRef}
           makeDefault
@@ -120,11 +157,19 @@ function App() {
         onFrameSelected={handleFrameSelected}
       />
       <InventorySheet />
-      <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 1 }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: 'max(8px, env(safe-area-inset-top))',
+          right: 'max(8px, env(safe-area-inset-right))',
+          zIndex: 1,
+        }}
+      >
         <Inspector />
       </div>
       <GizmoToggles />
       <ConnectionHint />
+      <ThemeToggle theme={theme} onToggle={toggleTheme} />
     </div>
   )
 }

@@ -16,6 +16,33 @@
   --wc-radius-sm: 6px;
   --wc-font-ui: 'Archivo', system-ui, sans-serif;
   --wc-font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+  /* Floating-button idle chrome (buttonStyle.ts) is deliberately a
+     slightly different shade from --wc-panel for contrast against the
+     panels it sits on/in — not just an alias for it. */
+  --wc-button-idle-bg: #1c1815;
+  --wc-button-idle-border: #6b6055;
+}
+
+/* Toggled via ThemeToggle.tsx (App.tsx sets data-theme on <html>),
+   defaulting to the dark palette above when unset. */
+:root[data-theme='light'] {
+  --wc-bg: #f4f1ea;
+  --wc-bg-gradient: radial-gradient(circle at 50% 25%, #ffffff 0%, #f4f1ea 72%);
+  --wc-panel: #ffffff;
+  --wc-panel-alt: #f7f4ee;
+  --wc-border: #ddd5c5;
+  --wc-border-button: #c9beaa;
+  --wc-text: #2a2620;
+  --wc-muted: #7c7466;
+  --wc-safe: #2f8a52;
+  --wc-warn: #a8670c;
+  --wc-unsafe: #c8362e;
+  --wc-button-idle-bg: #efe9dc;
+  --wc-button-idle-border: #cdc2ac;
+}
+
+:root[data-theme='light'] body {
+  color-scheme: light;
 }
 
 html,

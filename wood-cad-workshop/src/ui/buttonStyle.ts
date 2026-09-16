@@ -1,14 +1,15 @@
 import type { CSSProperties } from 'react'
 
-const IDLE_BACKGROUND = '#1c1815'
-// A visible, slightly warm mid-gray ("brushed metal") rather than the
-// original near-black #2c2822, which barely showed up against the
-// IDLE_BACKGROUND above it — borders were only nominally there.
-const IDLE_BORDER = '#6b6055'
-const IDLE_TEXT = '#eae6df'
-const ACTIVE_BACKGROUND = '#ff7a1a'
-const ACTIVE_BORDER = '#ff7a1a'
-const ACTIVE_TEXT = '#100c08'
+// Sourced from index.css's custom properties (see --wc-button-idle-bg
+// there for why idle isn't just --wc-panel) so this flips with the
+// data-theme attribute ThemeToggle.tsx sets, same as everything else.
+const IDLE_BACKGROUND = 'var(--wc-button-idle-bg)'
+const IDLE_BORDER = 'var(--wc-button-idle-border)'
+const IDLE_TEXT = 'var(--wc-text)'
+// Active/selected stays the brand accent in both themes, not themed itself.
+const ACTIVE_BACKGROUND = 'var(--wc-accent)'
+const ACTIVE_BORDER = 'var(--wc-accent)'
+const ACTIVE_TEXT = 'var(--wc-accent-contrast)'
 const ACTIVE_GLOW = '0 0 8px rgba(255, 122, 26, 0.45)'
 
 // Shared chrome for every button in the app's floating panels — charcoal

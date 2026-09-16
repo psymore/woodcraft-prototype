@@ -60,9 +60,9 @@ export function BottomSheet({
           bottom: 0,
           left: 0,
           right: 0,
-          background: '#141210',
-          color: '#eae6df',
-          border: '1px solid #2c2822',
+          background: 'var(--wc-panel)',
+          color: 'var(--wc-text)',
+          border: '1px solid var(--wc-border)',
           borderTopLeftRadius: 12,
           borderTopRightRadius: 12,
           zIndex: 2,
@@ -79,7 +79,7 @@ export function BottomSheet({
           onPointerCancel={handlePointerUp}
           style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 44, touchAction: 'none' }}
         >
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: '#ff7a1a' }} />
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--wc-accent)' }} />
         </div>
         <div
           style={{
