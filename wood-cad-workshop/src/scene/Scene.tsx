@@ -10,6 +10,7 @@ import { useSceneSession } from '../store/sceneSessionStore'
 export function Scene({ multiTouchActiveRef }: { multiTouchActiveRef: RefObject<boolean> }) {
   const instances = useSceneSession((s) => s.instances)
   const selectPiece = useSceneSession((s) => s.selectPiece)
+  const gizmoLocked = useSceneSession((s) => s.gizmoLocked)
   const centroid = computeCentroid(instances)
 
   return (
@@ -26,7 +27,7 @@ export function Scene({ multiTouchActiveRef }: { multiTouchActiveRef: RefObject<
         fadeDistance={200}
         side={DoubleSide}
       />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} onPointerDown={() => selectPiece(null)}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} onPointerDown={() => !gizmoLocked && selectPiece(null)}>
         <planeGeometry args={[120, 120]} />
         <meshStandardMaterial transparent opacity={0} />
       </mesh>

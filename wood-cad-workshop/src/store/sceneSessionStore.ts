@@ -40,6 +40,13 @@ interface SceneSessionState {
   // piece's up to 10 anchors at once would be the same visual-noise/
   // O(pieces × anchors) concern already flagged for findConnectionCandidates.
   showConnectionPoints: boolean
+  // When true, the ground plane's deselect-on-pointerdown (Scene.tsx) is
+  // suppressed — otherwise the start of an orbit/pan gesture that happens
+  // to land on the ground near another piece deselects the current piece
+  // and closes its gizmo mid-navigation. A separate control from
+  // showRotationGizmo (that one hides the gizmo outright; this one keeps
+  // whatever's selected pinned through background taps).
+  gizmoLocked: boolean
   // Set by movePiece when a drag ends up right next to an anchor that's
   // already claimed by another connection — the closest possible match,
   // but not one movePiece can make. Cleared as soon as the drag moves
@@ -70,6 +77,7 @@ interface SceneSessionState {
   toggleRotationGizmo: () => void
   toggleMoveHandle: () => void
   toggleConnectionPoints: () => void
+  toggleGizmoLocked: () => void
 }
 
 // One short-lived per-session store, created via a factory — mirrors
@@ -89,6 +97,7 @@ export function createSceneSessionStore() {
     showRotationGizmo: true,
     showMoveHandle: true,
     showConnectionPoints: false,
+    gizmoLocked: false,
     blockedConnectionHint: null,
 
     selectPiece: (id) => set({ selectedId: id, selectedConnectionId: null }),
@@ -407,6 +416,8 @@ export function createSceneSessionStore() {
     toggleMoveHandle: () => set((state) => ({ showMoveHandle: !state.showMoveHandle })),
 
     toggleConnectionPoints: () => set((state) => ({ showConnectionPoints: !state.showConnectionPoints })),
+
+    toggleGizmoLocked: () => set((state) => ({ gizmoLocked: !state.gizmoLocked })),
   }))
 }
 
