@@ -28,7 +28,14 @@ export function MainMenu({
     <>
       <button
         onClick={() => setOpen((o) => !o)}
-        style={{ position: 'absolute', top: 8, left: 8, minWidth: 44, minHeight: 44, zIndex: 3 }}
+        style={{
+          position: 'absolute',
+          top: 'max(8px, env(safe-area-inset-top))',
+          left: 'max(8px, env(safe-area-inset-left))',
+          minWidth: 44,
+          minHeight: 44,
+          zIndex: 3,
+        }}
       >
         ☰
       </button>
@@ -41,8 +48,8 @@ export function MainMenu({
           <div
             style={{
               position: 'absolute',
-              top: 56,
-              left: 8,
+              top: 'calc(48px + max(8px, env(safe-area-inset-top)))',
+              left: 'max(8px, env(safe-area-inset-left))',
               zIndex: 3,
               width: 'min(240px, 70vw)',
               maxHeight: '75vh',

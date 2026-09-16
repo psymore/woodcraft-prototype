@@ -27,7 +27,16 @@ export function GizmoToggles() {
   if (!hasSelection) return null
 
   return (
-    <div style={{ position: 'absolute', bottom: 8, right: 8, display: 'flex', gap: 4, zIndex: 1 }}>
+    <div
+      style={{
+        position: 'absolute',
+        bottom: 'max(8px, env(safe-area-inset-bottom))',
+        right: 'max(8px, env(safe-area-inset-right))',
+        display: 'flex',
+        gap: 4,
+        zIndex: 1,
+      }}
+    >
       <button onClick={toggleMoveHandle} style={switchStyle(showMoveHandle)} title="Vertical move handle">
         ↕
       </button>
