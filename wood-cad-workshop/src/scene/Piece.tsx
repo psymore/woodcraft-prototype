@@ -18,7 +18,7 @@ const ROTATION_SNAP = THREE.MathUtils.degToRad(15)
 const MOVE_HANDLE_RADIUS = 0.6
 const MOVE_HANDLE_HEIGHT = 1.2
 const MOVE_HANDLE_GLOW_SCALE = 1.35
-const ROTATE_PICKER_SCALE = 2
+const ROTATE_PICKER_TUBE_RADIUS = 0.4
 const ROTATE_RING_LINE_WIDTH_PX = 4
 
 // Called via TransformControls' ref when the rotate gizmo mounts (and again
@@ -37,13 +37,34 @@ function tuneRotationGizmo(controls: THREE.Object3D | null, canvasWidth: number,
   })
   eRings.forEach((child) => child.parent?.remove(child))
 
+  // A per-mesh `.scale` doesn't stick here: three-stdlib's own
+  // updateMatrixWorld unconditionally resets every handle's scale every
+  // frame (`handle.scale.set(1,1,1).multiplyScalar(factor * size / 7)`,
+  // the same screen-constant-sizing math as elsewhere in this file) to keep
+  // the whole gizmo's apparent size correct — so a one-time scale-up here
+  // gets silently wiped the very next frame. Enlarging the picker's own
+  // geometry (its tube radius, not its scale) survives that reset, since
+  // the per-frame code scales whatever shape is there uniformly along with
+  // every other handle, not just this one.
   controls.traverse((child) => {
     if (
       (child.name === 'X' || child.name === 'Y' || child.name === 'Z') &&
       child instanceof THREE.Mesh &&
-      child.geometry instanceof THREE.TorusGeometry
+      child.geometry instanceof THREE.TorusGeometry &&
+      !child.userData.isEnlargedPicker
     ) {
-      child.scale.setScalar(ROTATE_PICKER_SCALE)
+      const { radius, radialSegments, tubularSegments } = child.geometry.parameters
+      const enlarged = new THREE.TorusGeometry(radius, ROTATE_PICKER_TUBE_RADIUS, radialSegments, tubularSegments)
+      // A full torus is rotationally symmetric about its own hole axis, so
+      // only which plane it lies in matters (not the roll baked into the
+      // original geometry) — default TorusGeometry lies in the XY plane
+      // (hole along Z), so X needs a Y-rotation and Y an X-rotation to
+      // reach their planes; Z already matches.
+      if (child.name === 'X') enlarged.rotateY(Math.PI / 2)
+      if (child.name === 'Y') enlarged.rotateX(Math.PI / 2)
+      child.geometry.dispose()
+      child.geometry = enlarged
+      child.userData.isEnlargedPicker = true
     }
   })
 
