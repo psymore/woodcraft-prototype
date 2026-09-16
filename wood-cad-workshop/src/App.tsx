@@ -137,8 +137,12 @@ function App() {
       onPointerCancelCapture={handlePointerUpCapture}
     >
       <Canvas camera={{ position: [0, 20, 25], fov: 50, near: 0.5, far: 500 }}>
-        {/* Piece.tsx's useTexture (wood PBR maps) suspends while loading —
-            without a boundary here that throws all the way past Canvas. */}
+        {/* Outermost safety net only — without SOME boundary here, an
+            uncaught suspense (e.g. the very first texture load, before any
+            piece exists to own it) would throw all the way past Canvas.
+            Piece.tsx's WoodMaterial owns its own per-piece Suspense with a
+            flat-color fallback, so an in-session species change never
+            reaches this one and blanks the whole scene. */}
         <Suspense fallback={null}>
           <Scene multiTouchActiveRef={multiTouchActiveRef} />
         </Suspense>

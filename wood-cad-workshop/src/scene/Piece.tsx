@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
 import { useThree } from '@react-three/fiber'
@@ -221,6 +221,70 @@ function tuneRotationGizmo(controls: THREE.Object3D | null, canvasWidth: number,
   })
 }
 
+// Loads the current species' PBR maps via useTexture, which suspends while
+// a newly-picked species' textures are still loading. Split out from Piece
+// itself so that suspense only hides THIS piece's material — a shared
+// Suspense boundary around the whole scene would blank every piece to
+// fallback={null} (a black canvas) whenever any one piece's species changed.
+function WoodMaterial({
+  speciesId,
+  color,
+  depthBias,
+}: {
+  speciesId: string | undefined
+  color: string
+  depthBias: number
+}) {
+  const species = getSpecies(speciesId)
+  const woodTextureInputs = useTexture({
+    map: species?.textures.color ?? FALLBACK_WOOD_TEXTURES.color,
+    normalMap: species?.textures.normal ?? FALLBACK_WOOD_TEXTURES.normal,
+    roughnessMap: species?.textures.roughness ?? FALLBACK_WOOD_TEXTURES.roughness,
+  })
+  // Tiling itself is done by the geometry's own UVs (applyBoxWorldUV /
+  // applyCylinderWorldUV below), not by `texture.repeat` — so, unlike the
+  // per-instance repeat this used to compute, the maps here are the SHARED
+  // textures useTexture returns, safe to reuse across every board of the
+  // same species without cloning. Only the wrap mode needs setting (once
+  // is enough — repeat-setting on an already-repeat-wrapped texture is a
+  // harmless no-op — so this doesn't need to be more than a plain `if`).
+  if (species) {
+    ;[woodTextureInputs.map, woodTextureInputs.normalMap, woodTextureInputs.roughnessMap].forEach((texture) => {
+      if (texture.wrapS === THREE.RepeatWrapping) return
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping
+      texture.needsUpdate = true
+    })
+    woodTextureInputs.map.colorSpace = THREE.SRGBColorSpace
+  }
+  const woodMaterialMaps = species ? woodTextureInputs : null
+  return (
+    <meshStandardMaterial
+      color={color}
+      map={woodMaterialMaps?.map}
+      normalMap={woodMaterialMaps?.normalMap}
+      roughnessMap={woodMaterialMaps?.roughnessMap}
+      polygonOffset
+      polygonOffsetFactor={depthBias}
+      polygonOffsetUnits={depthBias}
+    />
+  )
+}
+
+// Fallback while WoodMaterial's useTexture is (re)loading the current
+// species' maps — a flat, untextured material in the same color rather than
+// fallback={null}, so a species change reads as a brief flat-color flash on
+// just this piece instead of the piece (or the whole scene) disappearing.
+function WoodMaterialFallback({ color, depthBias }: { color: string; depthBias: number }) {
+  return (
+    <meshStandardMaterial
+      color={color}
+      polygonOffset
+      polygonOffsetFactor={depthBias}
+      polygonOffsetUnits={depthBias}
+    />
+  )
+}
+
 export function Piece({
   instance,
   definition,
@@ -243,28 +307,10 @@ export function Piece({
   const camera = useThree((s) => s.camera)
   const canvasSize = useThree((s) => s.size)
 
+  // Only needed here to know WHETHER this piece has a species (for the
+  // color logic below) — the actual texture loading (and its suspense) is
+  // isolated inside WoodMaterial so it can't blank out the rest of the scene.
   const species = getSpecies(instance.speciesId)
-  const woodTextureInputs = useTexture({
-    map: species?.textures.color ?? FALLBACK_WOOD_TEXTURES.color,
-    normalMap: species?.textures.normal ?? FALLBACK_WOOD_TEXTURES.normal,
-    roughnessMap: species?.textures.roughness ?? FALLBACK_WOOD_TEXTURES.roughness,
-  })
-  // Tiling itself is done by the geometry's own UVs (applyBoxWorldUV /
-  // applyCylinderWorldUV below), not by `texture.repeat` — so, unlike the
-  // per-instance repeat this used to compute, the maps here are the SHARED
-  // textures useTexture returns, safe to reuse across every board of the
-  // same species without cloning. Only the wrap mode needs setting (once
-  // is enough — repeat-setting on an already-repeat-wrapped texture is a
-  // harmless no-op — so this doesn't need to be more than a plain `if`).
-  if (species) {
-    ;[woodTextureInputs.map, woodTextureInputs.normalMap, woodTextureInputs.roughnessMap].forEach((texture) => {
-      if (texture.wrapS === THREE.RepeatWrapping) return
-      texture.wrapS = texture.wrapT = THREE.RepeatWrapping
-      texture.needsUpdate = true
-    })
-    woodTextureInputs.map.colorSpace = THREE.SRGBColorSpace
-  }
-  const woodMaterialMaps = species ? woodTextureInputs : null
 
   const tuneRotationGizmoRef = useCallback(
     (controls: THREE.Object3D | null) => tuneRotationGizmo(controls, canvasSize.width, canvasSize.height),
@@ -384,7 +430,7 @@ export function Piece({
   // map's true colors, cyan = the existing selection glow drawn over the
   // wood grain instead of replacing it) rather than being the piece's only
   // color source the way it is for untextured hardware.
-  const color = selected ? '#4fd1ff' : woodMaterialMaps ? '#ffffff' : instance.material
+  const color = selected ? '#4fd1ff' : species ? '#ffffff' : instance.material
   const displayPosition = getExplodedPosition(instance.position, centroid, explodeAmount)
 
   const showVerticalHandle = selected && explodeAmount === 0 && showMoveHandle
@@ -510,9 +556,9 @@ export function Piece({
     const { radius, height } = getCylinderSize(instance)
     const cylinderGeometry = useMemo(() => {
       const geometry = new THREE.CylinderGeometry(radius, radius, height, 16)
-      if (woodMaterialMaps) applyCylinderWorldUV(geometry, radius, TEXTURE_TILE_UNITS)
+      if (species) applyCylinderWorldUV(geometry, radius, TEXTURE_TILE_UNITS)
       return geometry
-    }, [radius, height, woodMaterialMaps])
+    }, [radius, height, species])
     // <primitive>, unlike a declarative <cylinderGeometry>, isn't
     // auto-disposed by R3F on change/unmount — this geometry is
     // user-constructed (for the custom UVs above), so its disposal is too.
@@ -527,15 +573,9 @@ export function Piece({
             onPointerUp={handlePointerUp}
           >
             <primitive object={cylinderGeometry} attach="geometry" />
-            <meshStandardMaterial
-              color={color}
-              map={woodMaterialMaps?.map}
-              normalMap={woodMaterialMaps?.normalMap}
-              roughnessMap={woodMaterialMaps?.roughnessMap}
-              polygonOffset
-              polygonOffsetFactor={depthBiasFor(instance.id)}
-              polygonOffsetUnits={depthBiasFor(instance.id)}
-            />
+            <Suspense fallback={<WoodMaterialFallback color={color} depthBias={depthBiasFor(instance.id)} />}>
+              <WoodMaterial speciesId={instance.speciesId} color={color} depthBias={depthBiasFor(instance.id)} />
+            </Suspense>
           </mesh>
         </group>
         {verticalHandle([radius, radius, height / 2])}
@@ -566,9 +606,9 @@ export function Piece({
   const size = getBoxSize(instance)
   const boxGeometry = useMemo(() => {
     const geometry = new THREE.BoxGeometry(...size)
-    if (woodMaterialMaps) applyBoxWorldUV(geometry, TEXTURE_TILE_UNITS)
+    if (species) applyBoxWorldUV(geometry, TEXTURE_TILE_UNITS)
     return geometry
-  }, [size[0], size[1], size[2], woodMaterialMaps])
+  }, [size[0], size[1], size[2], species])
   useEffect(() => () => boxGeometry.dispose(), [boxGeometry])
   return (
     <>
@@ -579,15 +619,9 @@ export function Piece({
           onPointerUp={handlePointerUp}
         >
           <primitive object={boxGeometry} attach="geometry" />
-          <meshStandardMaterial
-            color={color}
-            map={woodMaterialMaps?.map}
-            normalMap={woodMaterialMaps?.normalMap}
-            roughnessMap={woodMaterialMaps?.roughnessMap}
-            polygonOffset
-            polygonOffsetFactor={depthBiasFor(instance.id)}
-            polygonOffsetUnits={depthBiasFor(instance.id)}
-          />
+          <Suspense fallback={<WoodMaterialFallback color={color} depthBias={depthBiasFor(instance.id)} />}>
+            <WoodMaterial speciesId={instance.speciesId} color={color} depthBias={depthBiasFor(instance.id)} />
+          </Suspense>
         </mesh>
       </group>
       {verticalHandle([size[0] / 2, size[1] / 2, size[2] / 2])}
