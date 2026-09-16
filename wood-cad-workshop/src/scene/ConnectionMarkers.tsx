@@ -1,4 +1,5 @@
 import type { ThreeEvent } from '@react-three/fiber'
+import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import {
   classifyAnchorPairKind,
@@ -11,6 +12,7 @@ import {
 } from '../engine'
 import type { AnchorMatch, AnchorPairKind, ComponentInstance, ConnectionCandidate } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
+import { MIN_TAP_TARGET_RADIUS_PX, minWorldRadiusForPixels } from './screenSpace'
 
 // Candidate orb. Small enough that the preview line (below) can visibly
 // protrude past it at the maximum candidate gap (SNAP_DISTANCE/2 = 0.35 >
@@ -79,8 +81,16 @@ export function ConnectionMarkers() {
   const confirmConnection = useSceneSession((s) => s.confirmConnection)
   const selectedConnectionId = useSceneSession((s) => s.selectedConnectionId)
   const selectConnection = useSceneSession((s) => s.selectConnection)
+  const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera
+  const canvasHeight = useThree((s) => s.size.height)
 
   if (explodeAmount > 0) return null
+
+  // Fixed world-unit radii shrink below a comfortable tap target when
+  // zoomed out — never shrinks an already-larger marker, only boosts ones
+  // that would render too small at the current distance/zoom.
+  const tapTargetRadius = (baseRadius: number, worldPosition: [number, number, number]) =>
+    Math.max(baseRadius, minWorldRadiusForPixels(MIN_TAP_TARGET_RADIUS_PX, new THREE.Vector3(...worldPosition), camera, canvasHeight))
 
   // Full closest-approach match between two anchors, plus the piece
   // instances themselves (pinDirection needs their positions). Returns
@@ -126,6 +136,7 @@ export function ConnectionMarkers() {
         ]
         const line = segmentTransform(match.pointA, match.pointB)
         const color = candidateColor(pieceA, candidate.a.anchorIndex, pieceB, candidate.b.anchorIndex)
+        const orbRadius = tapTargetRadius(CANDIDATE_MARKER_RADIUS, midpoint)
         const onConfirm = (e: ThreeEvent<MouseEvent>) => {
           stop(e)
           confirmConnection(candidate)
@@ -141,11 +152,11 @@ export function ConnectionMarkers() {
             {/* Glow halo — additive, non-interactive, drawn just behind the
                 solid orb below. */}
             <mesh position={midpoint} raycast={() => null} renderOrder={1}>
-              <sphereGeometry args={[CANDIDATE_MARKER_RADIUS * GLOW_RADIUS_SCALE, 12, 12]} />
+              <sphereGeometry args={[orbRadius * GLOW_RADIUS_SCALE, 12, 12]} />
               <meshBasicMaterial color={color} transparent opacity={GLOW_OPACITY} blending={THREE.AdditiveBlending} depthWrite={false} depthTest={false} />
             </mesh>
             <mesh position={midpoint} renderOrder={2} onPointerDown={stop} onClick={onConfirm}>
-              <sphereGeometry args={[CANDIDATE_MARKER_RADIUS, 12, 12]} />
+              <sphereGeometry args={[orbRadius, 12, 12]} />
               {/* depthTest off, same X-ray technique as AnchorMarkers.tsx:
                   on overlapping/nested pieces this orb can end up buried
                   inside another piece's geometry, making it hard to spot
@@ -179,7 +190,7 @@ export function ConnectionMarkers() {
         ]
         const pin = segmentTransform(joint, tip)
         const isSelected = connection.id === selectedConnectionId
-        const pinRadius = isSelected ? PIN_RADIUS * 1.25 : PIN_RADIUS
+        const pinRadius = tapTargetRadius(isSelected ? PIN_RADIUS * 1.25 : PIN_RADIUS, pin.position)
         const pinColor = isSelected ? SELECTED_CONNECTED_COLOR : CONNECTED_COLOR
         const onSelect = (e: ThreeEvent<MouseEvent>) => {
           stop(e)

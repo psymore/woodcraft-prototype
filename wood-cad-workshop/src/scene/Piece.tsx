@@ -7,11 +7,13 @@ import * as THREE from 'three'
 import type { ComponentDefinition, ComponentInstance } from '../engine'
 import { depthBiasFor, getBoxSize, getCylinderSize, getExplodedPosition, snapValue } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
+import { MIN_TAP_TARGET_RADIUS_PX, minWorldRadiusForPixels, worldRadiusToPixels } from './screenSpace'
 
 const GRID_INCREMENT = 1
 const GROUND_PLANE = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
 const HANDLE_GAP = 0.5
 const ROTATION_SNAP = THREE.MathUtils.degToRad(15)
+const MOVE_HANDLE_RADIUS = 0.6
 
 export function Piece({
   instance,
@@ -33,6 +35,7 @@ export function Piece({
   const showRotationGizmo = useSceneSession((s) => s.showRotationGizmo)
   const showMoveHandle = useSceneSession((s) => s.showMoveHandle)
   const camera = useThree((s) => s.camera)
+  const canvasSize = useThree((s) => s.size)
 
   // State-backed callback ref, not useRef: TransformControls needs the real
   // group object at render time. A useRef is null on the first render and
@@ -171,24 +174,46 @@ export function Piece({
     return ((factor * gizmoSize) / 7) * outerRingLocalRadius
   }
 
-  const verticalHandle = (halfExtents: [number, number, number]) =>
-    showVerticalHandle && (
+  // Even though the gizmo's angular size is already zoom-constant (above),
+  // its actual on-screen pixel size still depends on canvas height/fov, so
+  // at a narrow enough viewport it can still render under the 44px tap
+  // target minimum. `size` is a linear multiplier drei's TransformControls
+  // applies to that same formula, so this converts the current radius to
+  // pixels and scales it up (never down) to clear the minimum.
+  const getGizmoSizeMultiplier = () => {
+    if (!showGizmo) return 1
+    const cam = camera as THREE.PerspectiveCamera
+    const worldPosition = new THREE.Vector3(...displayPosition)
+    const currentPixels = worldRadiusToPixels(getGizmoOuterRadius(), worldPosition, cam, canvasSize.height)
+    if (currentPixels <= 0) return 1
+    return Math.max(1, MIN_TAP_TARGET_RADIUS_PX / currentPixels)
+  }
+
+  const verticalHandle = (halfExtents: [number, number, number]) => {
+    if (!showVerticalHandle) return null
+    const position: [number, number, number] = [
+      displayPosition[0],
+      displayPosition[1] + Math.max(getVerticalExtent(halfExtents), getGizmoOuterRadius()) + HANDLE_GAP,
+      displayPosition[2],
+    ]
+    // Fixed world-unit geometry shrinks below a comfortable tap target when
+    // zoomed out — scale the whole cone up (never down) so its rendered
+    // radius never falls under the app's 44px minimum.
+    const minRadius = minWorldRadiusForPixels(MIN_TAP_TARGET_RADIUS_PX, new THREE.Vector3(...position), camera as THREE.PerspectiveCamera, canvasSize.height)
+    const scale = Math.max(1, minRadius / MOVE_HANDLE_RADIUS)
+    return (
       <mesh
-        position={[
-          displayPosition[0],
-          displayPosition[1] +
-            Math.max(getVerticalExtent(halfExtents), getGizmoOuterRadius()) +
-            HANDLE_GAP,
-          displayPosition[2],
-        ]}
+        position={position}
+        scale={scale}
         onPointerDown={handleVerticalPointerDown}
         onPointerMove={handleVerticalPointerMove}
         onPointerUp={handleVerticalPointerUp}
       >
-        <coneGeometry args={[0.6, 1.2, 12]} />
+        <coneGeometry args={[MOVE_HANDLE_RADIUS, 1.2, 12]} />
         <meshStandardMaterial color="#4a90d9" />
       </mesh>
     )
+  }
 
   if (definition.geometry.shape === 'cylinder') {
     const { radius, height } = getCylinderSize(instance)
@@ -216,6 +241,7 @@ export function Piece({
             object={group}
             mode="rotate"
             space="world"
+            size={getGizmoSizeMultiplier()}
             rotationSnap={ROTATION_SNAP}
             showX
             showY
@@ -251,6 +277,7 @@ export function Piece({
           object={group}
           mode="rotate"
           space="world"
+          size={getGizmoSizeMultiplier()}
           rotationSnap={ROTATION_SNAP}
           showX
           showY
