@@ -18,7 +18,7 @@ const ROTATION_SNAP = THREE.MathUtils.degToRad(15)
 const MOVE_HANDLE_RADIUS = 0.6
 const MOVE_HANDLE_HEIGHT = 1.2
 const MOVE_HANDLE_GLOW_SCALE = 1.35
-const ROTATE_PICKER_TUBE_RADIUS = 0.4
+const ROTATE_PICKER_TUBE_RADIUS = 0.7
 const ROTATE_RING_LINE_WIDTH_PX = 4
 
 // Called via TransformControls' ref when the rotate gizmo mounts (and again
