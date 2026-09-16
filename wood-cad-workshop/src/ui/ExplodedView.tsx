@@ -1,16 +1,21 @@
+import { Combine, Expand } from 'lucide-react'
 import { useSceneSession } from '../store/sceneSessionStore'
-import { panelButtonStyle } from './buttonStyle'
+import { MenuButton } from './MenuButton'
 
-export function ExplodedView() {
+export function ExplodedView({ showLabels }: { showLabels: boolean }) {
   const amount = useSceneSession((s) => s.explodeAmount)
   const setExplodeAmount = useSceneSession((s) => s.setExplodeAmount)
   const active = amount > 0
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <button onClick={() => setExplodeAmount(active ? 0 : 0.5)} style={panelButtonStyle(active)}>
-        {active ? 'ASSEMBLE' : 'EXPLODE'}
-      </button>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <MenuButton
+        icon={active ? <Combine size={18} /> : <Expand size={18} />}
+        label={active ? 'Assemble' : 'Explode'}
+        showLabels={showLabels}
+        onClick={() => setExplodeAmount(active ? 0 : 0.5)}
+        active={active}
+      />
       {active && (
         <>
           <input

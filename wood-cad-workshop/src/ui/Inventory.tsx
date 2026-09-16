@@ -1,8 +1,10 @@
+import { Package } from 'lucide-react'
 import { getComponents } from '../engine'
 import type { ComponentCategory } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
 import { BottomSheet } from './BottomSheet'
 import { panelButtonStyle } from './buttonStyle'
+import { MenuButton } from './MenuButton'
 
 const CATEGORY_ORDER: ComponentCategory[] = ['WOOD', 'HARDWARE', 'FASTENER']
 const CATEGORY_LABELS: Record<ComponentCategory, string> = {
@@ -14,13 +16,19 @@ const CATEGORY_LABELS: Record<ComponentCategory, string> = {
 // Split in two so the trigger button can live in the main menu while the
 // sheet itself (driven purely by store state) stays mounted at the app
 // root, independent of wherever the button that opens it lives.
-export function InventoryButton() {
+export function InventoryButton({ showLabels, onOpened }: { showLabels: boolean; onOpened?: () => void }) {
   const toggleInventory = useSceneSession((s) => s.toggleInventory)
-  return (
-    <button onClick={toggleInventory} style={panelButtonStyle()}>
-      INVENTORY
-    </button>
-  )
+  // The inventory sheet (BottomSheet, z-index 2) opens as its own
+  // full-width overlay, distinct from MainMenu's dropdown (z-index 3) —
+  // left open together, the still-open dropdown sits on top of it,
+  // making the sheet read as stuck "under" the menu. Closing the
+  // dropdown here (MainMenu passes its own setOpen(false) as `onOpened`)
+  // avoids the two ever stacking.
+  const handleClick = () => {
+    toggleInventory()
+    onOpened?.()
+  }
+  return <MenuButton icon={<Package size={18} />} label="Inventory" showLabels={showLabels} onClick={handleClick} />
 }
 
 export function InventorySheet() {

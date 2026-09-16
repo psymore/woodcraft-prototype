@@ -1,8 +1,9 @@
+import { ArrowUpFromLine, Copy, RotateCw, Trash2 } from 'lucide-react'
 import { getComponent } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
-import { panelButtonStyle } from './buttonStyle'
+import { MenuButton } from './MenuButton'
 
-export function PieceControls() {
+export function PieceControls({ showLabels }: { showLabels: boolean }) {
   const selected = useSceneSession((s) => s.instances.find((i) => i.id === s.selectedId) ?? null)
   const rotateSelected = useSceneSession((s) => s.rotateSelected)
   const standSelectedUp = useSceneSession((s) => s.standSelectedUp)
@@ -14,20 +15,17 @@ export function PieceControls() {
 
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-      <button onClick={rotateSelected} style={panelButtonStyle()}>
-        ROTATE
-      </button>
+      <MenuButton icon={<RotateCw size={18} />} label="Rotate" showLabels={showLabels} onClick={rotateSelected} />
       {canStandUp && (
-        <button onClick={standSelectedUp} style={panelButtonStyle()}>
-          STAND UP
-        </button>
+        <MenuButton
+          icon={<ArrowUpFromLine size={18} />}
+          label="Stand Up"
+          showLabels={showLabels}
+          onClick={standSelectedUp}
+        />
       )}
-      <button onClick={duplicateSelected} style={panelButtonStyle()}>
-        DUPLICATE
-      </button>
-      <button onClick={deleteSelected} style={panelButtonStyle()}>
-        DELETE
-      </button>
+      <MenuButton icon={<Copy size={18} />} label="Duplicate" showLabels={showLabels} onClick={duplicateSelected} />
+      <MenuButton icon={<Trash2 size={18} />} label="Delete" showLabels={showLabels} onClick={deleteSelected} />
     </div>
   )
 }

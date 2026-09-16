@@ -1,12 +1,9 @@
+import { Dumbbell } from 'lucide-react'
 import { useSceneSession } from '../store/sceneSessionStore'
-import { panelButtonStyle } from './buttonStyle'
+import { MenuButton } from './MenuButton'
 
-export function PullupKitButton() {
+export function PullupKitButton({ showLabels }: { showLabels: boolean }) {
   const addPullupKit = useSceneSession((s) => s.addPullupKit)
 
-  return (
-    <button onClick={addPullupKit} style={panelButtonStyle()}>
-      PULL-UP KIT
-    </button>
-  )
+  return <MenuButton icon={<Dumbbell size={18} />} label="Pull-Up Kit" showLabels={showLabels} onClick={addPullupKit} />
 }
