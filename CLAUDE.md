@@ -9,7 +9,7 @@ where things live, not what they say.
 - **Product design & roadmap** (canonical): [docs/superpowers/specs/2026-08-20-woodcraft-prototype-design.md](docs/superpowers/specs/2026-08-20-woodcraft-prototype-design.md)
   Read this before touching scope, the data model, or the roadmap.
 - **Implementation plans**: `docs/superpowers/plans/` — one plan per prototype stage.
-- **Active agent handoff**: `docs/superpowers/plans/ACTIVE-WORK-vscode.md` — shared continuity record for Claude Code and VS Code Copilot; read before resuming and update after meaningful progress.
+- **Session continuity**: `docs/superpowers/plans/YYYY-MM-DD-<topic>-session.md` — dated, per-session index docs (e.g. [docs/superpowers/plans/2026-09-16-ui-polish-session.md](docs/superpowers/plans/2026-09-16-ui-polish-session.md)) capturing what changed and any known gaps; check the most recent one before resuming.
 - **Prototype 0 code**: `woodcraft/` (Panda3D desktop spike). Entry point: `woodcraft/main.py`.
 - **Active implementation**: `wood-cad-workshop/` (Three.js/React Three Fiber). Entry point: `wood-cad-workshop/src/main.tsx`. Registry-based component extensibility, pure engine core (`src/engine/`), Zustand session store — see that app's own docs for the architecture.
 - **Retired comparative spikes** (historical reference only, not built on): `spikes/touch-spike-threejs/` and `spikes/touch-spike-godot/`. The Godot one is additionally gitignored (kept on disk, not tracked).

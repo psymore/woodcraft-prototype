@@ -19,7 +19,7 @@ Scope and routing
 
 - This file is a repository-level policy only. For product scope, design decisions, and implementation plans, consult the canonical documents listed in [CLAUDE.md](CLAUDE.md) and the files under docs/superpowers/.
 - Do not attempt to summarize or duplicate the full design/spec content here — link to it instead.
-- For handoffs between VS Code Copilot and Claude Code, read and update [docs/superpowers/plans/ACTIVE-WORK-vscode.md](../docs/superpowers/plans/ACTIVE-WORK-vscode.md) with verified state, decisions, validation, blockers, and one next action.
+- For continuity between sessions/agents, check the most recent dated `docs/superpowers/plans/YYYY-MM-DD-*-session.md` index doc for what changed and any known gaps.
 
 Hook protection
 
@@ -36,8 +36,6 @@ No automatic commits
 Implementation plans storage
 
 - Implementation plans and stage-level plans must be versioned inside this repository. Recommended canonical location: docs/superpowers/plans/. Do not rely on user-level VS Code settings or external ephemeral notes as the single source of truth for implementation plans.
-- Plans authored or continued in VS Code by GitHub Copilot must use a `-vscode.md` filename suffix and include frontmatter with `vscode: true`, `vscode-copilot: true`, and `author: "GitHub Copilot (VS Code)"`.
-- The `-vscode` marker identifies the authoring environment; it does not override the repository's canonical specifications, approved scope, or governance.
 - If a different repository location is preferred (for example, `.vscode/implementation-plans.md`) propose it in the chat and obtain explicit approval; until then use docs/superpowers/plans/ as the default.
 
 Contact

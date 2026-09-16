@@ -20,7 +20,7 @@ Entries
    - Owner: Engineering lead for current prototype stage
    - Consumers: Engineers implementing features
    - Load trigger: Starting implementation work for a prototype stage
-   - Note: When a plan is continued in a VS Code workspace, use the `-vscode` filename indicator (for example `01-woodcraft-snap-math-vscode.md`) and include a short frontmatter `vscode: true` note. See docs/superpowers/plans/README-vscode-plans-indicator.md for the convention.
+   - Note: Session continuity uses dated `YYYY-MM-DD-<topic>-session.md` index docs in the same folder (e.g. `2026-09-16-ui-polish-session.md`) capturing what changed and any known gaps — check the most recent one before resuming.
 
 3. Prototype code (runtime behavior)
    - Path: woodcraft/
