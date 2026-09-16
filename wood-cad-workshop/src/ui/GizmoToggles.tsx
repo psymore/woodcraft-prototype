@@ -1,4 +1,4 @@
-import { Anchor, Lock, MoveVertical, Rotate3d } from 'lucide-react'
+import { Anchor, Link2, Lock, MoveVertical, Rotate3d } from 'lucide-react'
 import { useSceneSession } from '../store/sceneSessionStore'
 import { panelButtonStyle } from './buttonStyle'
 
@@ -10,10 +10,12 @@ export function GizmoToggles() {
   const showRotationGizmo = useSceneSession((s) => s.showRotationGizmo)
   const showMoveHandle = useSceneSession((s) => s.showMoveHandle)
   const showConnectionPoints = useSceneSession((s) => s.showConnectionPoints)
+  const showConnectionMarkers = useSceneSession((s) => s.showConnectionMarkers)
   const gizmoLocked = useSceneSession((s) => s.gizmoLocked)
   const toggleRotationGizmo = useSceneSession((s) => s.toggleRotationGizmo)
   const toggleMoveHandle = useSceneSession((s) => s.toggleMoveHandle)
   const toggleConnectionPoints = useSceneSession((s) => s.toggleConnectionPoints)
+  const toggleConnectionMarkers = useSceneSession((s) => s.toggleConnectionMarkers)
   const toggleGizmoLocked = useSceneSession((s) => s.toggleGizmoLocked)
 
   if (!hasSelection) return null
@@ -91,6 +93,13 @@ export function GizmoToggles() {
       </button>
       <button onClick={toggleConnectionPoints} style={panelButtonStyle(showConnectionPoints)} title="Show connection points">
         <Anchor size={20} />
+      </button>
+      {/* Link2 (a chain-link glyph), distinct from Anchor above — that one
+          shows every potential connection point on the selected piece;
+          this hides/shows the actual connection state markers (candidate
+          orbs + confirmed pins) rendered by ConnectionMarkers.tsx. */}
+      <button onClick={toggleConnectionMarkers} style={panelButtonStyle(showConnectionMarkers)} title="Show connection markers">
+        <Link2 size={20} />
       </button>
     </div>
   )

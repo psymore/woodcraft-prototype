@@ -40,6 +40,14 @@ interface SceneSessionState {
   // piece's up to 10 anchors at once would be the same visual-noise/
   // O(pieces × anchors) concern already flagged for findConnectionCandidates.
   showConnectionPoints: boolean
+  // Scene-wide visibility for ConnectionMarkers.tsx (both not-yet-confirmed
+  // candidate orbs and confirmed-connection pins) — default on, since
+  // that's the existing behavior this toggle was added on top of. Distinct
+  // from showConnectionPoints above: that one is a per-piece discoverability
+  // aid (every anchor on the SELECTED piece); this one is the actual
+  // connection state markers, always relevant scene-wide regardless of
+  // selection.
+  showConnectionMarkers: boolean
   // When true, the ground plane's deselect-on-pointerdown (Scene.tsx) is
   // suppressed — otherwise the start of an orbit/pan gesture that happens
   // to land on the ground near another piece deselects the current piece
@@ -77,6 +85,7 @@ interface SceneSessionState {
   toggleRotationGizmo: () => void
   toggleMoveHandle: () => void
   toggleConnectionPoints: () => void
+  toggleConnectionMarkers: () => void
   toggleGizmoLocked: () => void
 }
 
@@ -97,6 +106,7 @@ export function createSceneSessionStore() {
     showRotationGizmo: true,
     showMoveHandle: true,
     showConnectionPoints: false,
+    showConnectionMarkers: true,
     gizmoLocked: false,
     blockedConnectionHint: null,
 
@@ -416,6 +426,8 @@ export function createSceneSessionStore() {
     toggleMoveHandle: () => set((state) => ({ showMoveHandle: !state.showMoveHandle })),
 
     toggleConnectionPoints: () => set((state) => ({ showConnectionPoints: !state.showConnectionPoints })),
+
+    toggleConnectionMarkers: () => set((state) => ({ showConnectionMarkers: !state.showConnectionMarkers })),
 
     toggleGizmoLocked: () => set((state) => ({ gizmoLocked: !state.gizmoLocked })),
   }))
