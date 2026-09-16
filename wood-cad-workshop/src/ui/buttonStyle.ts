@@ -1,7 +1,10 @@
 import type { CSSProperties } from 'react'
 
 const IDLE_BACKGROUND = '#1c1815'
-const IDLE_BORDER = '#2c2822'
+// A visible, slightly warm mid-gray ("brushed metal") rather than the
+// original near-black #2c2822, which barely showed up against the
+// IDLE_BACKGROUND above it — borders were only nominally there.
+const IDLE_BORDER = '#6b6055'
 const IDLE_TEXT = '#eae6df'
 const ACTIVE_BACKGROUND = '#ff7a1a'
 const ACTIVE_BORDER = '#ff7a1a'
@@ -18,6 +21,10 @@ export function panelButtonStyle(active = false): CSSProperties {
     minWidth: 44,
     minHeight: 44,
     padding: '0 12px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     background: active ? ACTIVE_BACKGROUND : IDLE_BACKGROUND,
     color: active ? ACTIVE_TEXT : IDLE_TEXT,
     border: `1px solid ${active ? ACTIVE_BORDER : IDLE_BORDER}`,

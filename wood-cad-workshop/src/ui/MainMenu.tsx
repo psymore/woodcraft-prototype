@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Menu } from 'lucide-react'
 import type { ViewName } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
 import { ViewControls } from './ViewControls'
@@ -6,6 +7,7 @@ import { PieceControls } from './PieceControls'
 import { InventoryButton } from './Inventory'
 import { PullupKitButton } from './PullupKitButton'
 import { ExplodedView } from './ExplodedView'
+import { panelButtonStyle } from './buttonStyle'
 
 // Every floating button in the app, collapsed behind one top-left menu
 // button so the viewport stays clear on mobile — only this button shows
@@ -32,12 +34,11 @@ export function MainMenu({
           position: 'absolute',
           top: 'max(8px, env(safe-area-inset-top))',
           left: 'max(8px, env(safe-area-inset-left))',
-          minWidth: 44,
-          minHeight: 44,
           zIndex: 3,
+          ...panelButtonStyle(),
         }}
       >
-        ☰
+        <Menu size={20} />
       </button>
       {open && (
         <>

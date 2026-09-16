@@ -1,3 +1,4 @@
+import { Anchor, MoveVertical, Rotate3d } from 'lucide-react'
 import { useSceneSession } from '../store/sceneSessionStore'
 import { panelButtonStyle } from './buttonStyle'
 
@@ -27,13 +28,17 @@ export function GizmoToggles() {
       }}
     >
       <button onClick={toggleMoveHandle} style={panelButtonStyle(showMoveHandle)} title="Vertical move handle">
-        ↕
+        <MoveVertical size={20} />
       </button>
+      {/* Rotate3d (a small 3D-axes rotation glyph), not the ↻/RotateCw
+          "redo/refresh" look — this toggles the rotation GIZMO's
+          visibility, not a one-shot rotate action, and the refresh-style
+          arrow read as an action button rather than a visibility switch. */}
       <button onClick={toggleRotationGizmo} style={panelButtonStyle(showRotationGizmo)} title="Rotation gizmo">
-        ↻
+        <Rotate3d size={20} />
       </button>
       <button onClick={toggleConnectionPoints} style={panelButtonStyle(showConnectionPoints)} title="Show connection points">
-        ⚓
+        <Anchor size={20} />
       </button>
     </div>
   )

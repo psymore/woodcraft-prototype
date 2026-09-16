@@ -16,6 +16,8 @@ const HANDLE_GAP = 1
 const GIZMO_CLEARANCE_FACTOR = 1.4
 const ROTATION_SNAP = THREE.MathUtils.degToRad(15)
 const MOVE_HANDLE_RADIUS = 0.6
+const MOVE_HANDLE_HEIGHT = 1.2
+const MOVE_HANDLE_GLOW_SCALE = 1.35
 const ROTATE_PICKER_SCALE = 2
 const ROTATE_RING_LINE_WIDTH_PX = 4
 
@@ -308,22 +310,34 @@ export function Piece({
     const scale = Math.max(1, minRadius / MOVE_HANDLE_RADIUS)
     return (
       <group position={position} scale={scale}>
+        {/* Every child below is shifted up by its own half-height (scaled by
+            its own local `scale`, since that's applied before the position
+            offset) so its BASE — not its center — sits at this group's
+            local origin. That keeps the base pinned exactly at `position`
+            (the piece's surface + gap) regardless of how big `scale` grows
+            when zoomed out — a centered cone would grow downward into the
+            piece as it scaled up. */}
         {/* Glow halo — additive, non-interactive, drawn just behind the
             outlined cone below. Same technique as the connection markers'
             glow halos (ConnectionMarkers.tsx/AnchorMarkers.tsx): a larger,
             faint, no-depth-write duplicate for a cheap neon feel. */}
-        <mesh scale={1.35} raycast={() => null}>
-          <coneGeometry args={[MOVE_HANDLE_RADIUS, 1.2, 12]} />
+        <mesh position={[0, (MOVE_HANDLE_HEIGHT / 2) * MOVE_HANDLE_GLOW_SCALE, 0]} scale={MOVE_HANDLE_GLOW_SCALE} raycast={() => null}>
+          <coneGeometry args={[MOVE_HANDLE_RADIUS, MOVE_HANDLE_HEIGHT, 12]} />
           <meshBasicMaterial color="#4a90d9" transparent opacity={0.35} blending={THREE.AdditiveBlending} depthWrite={false} depthTest={false} />
         </mesh>
         {/* Transparent fill with a crisp edge outline — the neon-border
             look, reusable for other pin-like handles if it reads well. */}
-        <mesh onPointerDown={handleVerticalPointerDown} onPointerMove={handleVerticalPointerMove} onPointerUp={handleVerticalPointerUp}>
-          <coneGeometry args={[MOVE_HANDLE_RADIUS, 1.2, 12]} />
+        <mesh
+          position={[0, MOVE_HANDLE_HEIGHT / 2, 0]}
+          onPointerDown={handleVerticalPointerDown}
+          onPointerMove={handleVerticalPointerMove}
+          onPointerUp={handleVerticalPointerUp}
+        >
+          <coneGeometry args={[MOVE_HANDLE_RADIUS, MOVE_HANDLE_HEIGHT, 12]} />
           <meshBasicMaterial color="#4a90d9" transparent opacity={0.12} depthWrite={false} />
         </mesh>
-        <lineSegments raycast={() => null}>
-          <edgesGeometry args={[new THREE.ConeGeometry(MOVE_HANDLE_RADIUS, 1.2, 12)]} />
+        <lineSegments position={[0, MOVE_HANDLE_HEIGHT / 2, 0]} raycast={() => null}>
+          <edgesGeometry args={[new THREE.ConeGeometry(MOVE_HANDLE_RADIUS, MOVE_HANDLE_HEIGHT, 12)]} />
           <lineBasicMaterial color="#7ec8ff" />
         </lineSegments>
       </group>
