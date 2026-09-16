@@ -19,7 +19,11 @@ const MOVE_HANDLE_RADIUS = 0.6
 const MOVE_HANDLE_HEIGHT = 1.2
 const MOVE_HANDLE_GLOW_SCALE = 1.35
 const ROTATE_PICKER_TUBE_RADIUS = 0.7
-const ROTATE_RING_LINE_WIDTH_PX = 4
+const ROTATE_RING_LINE_WIDTH_PX = 6
+// Extra headroom on top of the 44px-minimum sizing math below, so the whole
+// gizmo (both the visible rings and their click area, which scale together
+// via TransformControls' own `size` prop) reads as bigger and bolder overall.
+const GIZMO_SIZE_BOOST = 1.4
 
 // Called via TransformControls' ref when the rotate gizmo mounts (and again
 // on canvas resize, since line width in pixels needs a fresh resolution).
@@ -28,7 +32,11 @@ const ROTATE_RING_LINE_WIDTH_PX = 4
 // invisible hit-test torus for the X/Y/Z rings so they're easier to grab,
 // and swaps their thin (effectively 1px on most platforms, since
 // LineBasicMaterial's linewidth is ignored by WebGL) visual ring lines for
-// fat Line2/LineMaterial ones with a real pixel width.
+// fat Line2/LineMaterial ones with a real pixel width. (A real shaded 3D
+// torus was tried for the visible rings too, but the axis-orientation math
+// needed to keep it aligned with three-stdlib's per-frame handle transform
+// got fiddly for uncertain payoff — reverted in favor of this proven
+// approach plus just making everything bigger via GIZMO_SIZE_BOOST.)
 function tuneRotationGizmo(controls: THREE.Object3D | null, canvasWidth: number, canvasHeight: number) {
   if (!controls) return
   const eRings: THREE.Object3D[] = []
@@ -64,6 +72,14 @@ function tuneRotationGizmo(controls: THREE.Object3D | null, canvasWidth: number,
       if (child.name === 'Y') enlarged.rotateX(Math.PI / 2)
       child.geometry.dispose()
       child.geometry = enlarged
+      // The library's own "invisible" picker material is ~15% opacity —
+      // thin enough at its original tube radius to read as invisible, but
+      // this much fatter tube stacks many overlapping torus layers per
+      // screen pixel, compounding that 15% into a visibly solid blob.
+      // Raycasting only needs `visible: true` and doesn't care about
+      // opacity, so drop it to fully transparent instead.
+      const material = child.material as THREE.Material
+      material.opacity = 0
       child.userData.isEnlargedPicker = true
     }
   })
@@ -303,22 +319,30 @@ export function Piece({
   // at a narrow enough viewport it can still render under the 44px tap
   // target minimum. `size` is a linear multiplier drei's TransformControls
   // applies to that same formula, so this converts the current radius to
-  // pixels and scales it up (never down) to clear the minimum.
+  // pixels and scales it up (never down) to clear the minimum — then
+  // GIZMO_SIZE_BOOST makes the whole gizmo (rings and their click area
+  // together, both driven by this same `size` prop) bigger across the
+  // board, not just at the bare minimum.
   const getGizmoSizeMultiplier = () => {
     if (!showGizmo) return 1
     const cam = camera as THREE.PerspectiveCamera
     const worldPosition = new THREE.Vector3(...displayPosition)
     const currentPixels = worldRadiusToPixels(getGizmoOuterRadius(), worldPosition, cam, canvasSize.height)
-    if (currentPixels <= 0) return 1
-    return Math.max(1, MIN_TAP_TARGET_RADIUS_PX / currentPixels)
+    if (currentPixels <= 0) return GIZMO_SIZE_BOOST
+    return Math.max(GIZMO_SIZE_BOOST, (MIN_TAP_TARGET_RADIUS_PX / currentPixels) * GIZMO_SIZE_BOOST)
   }
 
   const verticalHandle = (halfExtents: [number, number, number]) => {
     if (!showVerticalHandle) return null
     // When the rotation gizmo is also showing, clear its rings with real
     // headroom (not just their bare radius) so the cone reads as a clearly
-    // separate control instead of nearly touching the topmost ring.
-    const gizmoClearance = showGizmo ? getGizmoOuterRadius() * GIZMO_CLEARANCE_FACTOR : getGizmoOuterRadius()
+    // separate control instead of nearly touching the topmost ring. Scaled
+    // by the same size multiplier the gizmo itself renders at (including
+    // GIZMO_SIZE_BOOST), since getGizmoOuterRadius() alone is the
+    // pre-boost radius — otherwise a bigger gizmo would outgrow this
+    // clearance and the cone would sit too close again.
+    const gizmoRenderedRadius = getGizmoOuterRadius() * getGizmoSizeMultiplier()
+    const gizmoClearance = showGizmo ? gizmoRenderedRadius * GIZMO_CLEARANCE_FACTOR : gizmoRenderedRadius
     const position: [number, number, number] = [
       displayPosition[0],
       displayPosition[1] + Math.max(getVerticalExtent(halfExtents), gizmoClearance) + HANDLE_GAP,
