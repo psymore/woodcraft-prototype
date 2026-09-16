@@ -1,5 +1,6 @@
 import { getComponent } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
+import { panelButtonStyle } from './buttonStyle'
 
 export function PieceControls() {
   const selected = useSceneSession((s) => s.instances.find((i) => i.id === s.selectedId) ?? null)
@@ -12,21 +13,19 @@ export function PieceControls() {
   const canStandUp = getComponent(selected.componentDefinitionId).connectionRole === 'ends'
 
   return (
-    <div
-      style={{ display: 'flex', gap: 4 }}
-    >
-      <button onClick={rotateSelected} style={{ minWidth: 44, minHeight: 44 }}>
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <button onClick={rotateSelected} style={panelButtonStyle()}>
         ROTATE
       </button>
       {canStandUp && (
-        <button onClick={standSelectedUp} style={{ minWidth: 44, minHeight: 44 }}>
+        <button onClick={standSelectedUp} style={panelButtonStyle()}>
           STAND UP
         </button>
       )}
-      <button onClick={duplicateSelected} style={{ minWidth: 44, minHeight: 44 }}>
+      <button onClick={duplicateSelected} style={panelButtonStyle()}>
         DUPLICATE
       </button>
-      <button onClick={deleteSelected} style={{ minWidth: 44, minHeight: 44 }}>
+      <button onClick={deleteSelected} style={panelButtonStyle()}>
         DELETE
       </button>
     </div>

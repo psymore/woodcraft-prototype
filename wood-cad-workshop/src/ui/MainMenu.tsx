@@ -57,38 +57,38 @@ export function MainMenu({
               background: '#141210',
               color: '#eae6df',
               border: '1px solid #2c2822',
-              borderRadius: 10,
-              padding: 10,
+              borderRadius: 12,
+              padding: 12,
               display: 'flex',
               flexDirection: 'column',
-              gap: 10,
+              gap: 12,
               fontSize: 13,
             }}
           >
             <section>
-              <div style={{ fontWeight: 'bold', marginBottom: 4 }}>View</div>
+              <div style={{ fontWeight: 'bold', marginBottom: 8 }}>View</div>
               <ViewControls onSelectView={onSelectView} onFrameAll={onFrameAll} onFrameSelected={onFrameSelected} />
             </section>
 
             {hasSelection && (
               <section>
-                <div style={{ fontWeight: 'bold', marginBottom: 4 }}>Piece</div>
+                <div style={{ fontWeight: 'bold', marginBottom: 8 }}>Piece</div>
                 <PieceControls />
               </section>
             )}
 
             <section>
-              <div style={{ fontWeight: 'bold', marginBottom: 4 }}>Inventory</div>
+              <div style={{ fontWeight: 'bold', marginBottom: 8 }}>Inventory</div>
               <InventoryButton />
             </section>
 
             <section>
-              <div style={{ fontWeight: 'bold', marginBottom: 4 }}>Kit</div>
+              <div style={{ fontWeight: 'bold', marginBottom: 8 }}>Kit</div>
               <PullupKitButton />
             </section>
 
             <section>
-              <div style={{ fontWeight: 'bold', marginBottom: 4 }}>Exploded View</div>
+              <div style={{ fontWeight: 'bold', marginBottom: 8 }}>Exploded View</div>
               <ExplodedView />
             </section>
           </div>

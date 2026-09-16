@@ -1,16 +1,5 @@
 import { useSceneSession } from '../store/sceneSessionStore'
-
-// Orange-tinted border and glow, unlike the app's default (unadorned,
-// glow-free) button styling — these float directly over the 3D canvas
-// and need to read as a distinct floating control cluster.
-const switchStyle = (active: boolean) => ({
-  minWidth: 44,
-  minHeight: 44,
-  background: active ? '#ff7a1a' : '#141210',
-  color: active ? '#100c08' : '#eae6df',
-  border: active ? '1px solid #ff7a1a' : '1px solid rgba(255, 122, 26, 0.5)',
-  boxShadow: '0 0 8px rgba(255, 122, 26, 0.45)',
-})
+import { panelButtonStyle } from './buttonStyle'
 
 // Bottom-right, opposite the menu button — lets the user hide the rotation
 // gizmo and/or the vertical-move handle when they're in the way of the
@@ -37,13 +26,13 @@ export function GizmoToggles() {
         zIndex: 1,
       }}
     >
-      <button onClick={toggleMoveHandle} style={switchStyle(showMoveHandle)} title="Vertical move handle">
+      <button onClick={toggleMoveHandle} style={panelButtonStyle(showMoveHandle)} title="Vertical move handle">
         ↕
       </button>
-      <button onClick={toggleRotationGizmo} style={switchStyle(showRotationGizmo)} title="Rotation gizmo">
+      <button onClick={toggleRotationGizmo} style={panelButtonStyle(showRotationGizmo)} title="Rotation gizmo">
         ↻
       </button>
-      <button onClick={toggleConnectionPoints} style={switchStyle(showConnectionPoints)} title="Show connection points">
+      <button onClick={toggleConnectionPoints} style={panelButtonStyle(showConnectionPoints)} title="Show connection points">
         ⚓
       </button>
     </div>

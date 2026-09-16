@@ -1,6 +1,7 @@
 import { VIEW_NAMES } from '../engine'
 import type { ViewName } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
+import { panelButtonStyle } from './buttonStyle'
 
 export function ViewControls({
   onSelectView,
@@ -14,16 +15,16 @@ export function ViewControls({
   const hasSelection = useSceneSession((s) => s.selectedId !== null)
 
   return (
-    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
       {VIEW_NAMES.map((view) => (
-        <button key={view} onClick={() => onSelectView(view)} style={{ minWidth: 44, minHeight: 44 }}>
+        <button key={view} onClick={() => onSelectView(view)} style={panelButtonStyle()}>
           {view.toUpperCase()}
         </button>
       ))}
-      <button onClick={onFrameAll} style={{ minWidth: 44, minHeight: 44 }}>
+      <button onClick={onFrameAll} style={panelButtonStyle()}>
         FRAME ALL
       </button>
-      <button onClick={onFrameSelected} disabled={!hasSelection} style={{ minWidth: 44, minHeight: 44 }}>
+      <button onClick={onFrameSelected} disabled={!hasSelection} style={panelButtonStyle()}>
         FRAME SEL
       </button>
     </div>

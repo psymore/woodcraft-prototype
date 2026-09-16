@@ -1,4 +1,5 @@
 import { useSceneSession } from '../store/sceneSessionStore'
+import { panelButtonStyle } from './buttonStyle'
 
 export function ExplodedView() {
   const amount = useSceneSession((s) => s.explodeAmount)
@@ -7,7 +8,7 @@ export function ExplodedView() {
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <button onClick={() => setExplodeAmount(active ? 0 : 0.5)} style={{ minWidth: 44, minHeight: 44 }}>
+      <button onClick={() => setExplodeAmount(active ? 0 : 0.5)} style={panelButtonStyle(active)}>
         {active ? 'ASSEMBLE' : 'EXPLODE'}
       </button>
       {active && (

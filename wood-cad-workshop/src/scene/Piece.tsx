@@ -224,7 +224,11 @@ export function Piece({
     setRotation(instance.id, [group.rotation.x, group.rotation.y, group.rotation.z])
   }
 
-  const color = selected ? '#ffb347' : instance.material
+  // Cyan-blue, not orange: orange is already spoken for by the active-toggle
+  // accent (GizmoToggles/panelButtonStyle) and the point-point candidate
+  // color (ConnectionMarkers.tsx) — selection is a different concept from
+  // either and shouldn't share their hue family.
+  const color = selected ? '#4fd1ff' : instance.material
   const displayPosition = getExplodedPosition(instance.position, centroid, explodeAmount)
 
   const showVerticalHandle = selected && explodeAmount === 0 && showMoveHandle
