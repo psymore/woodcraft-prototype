@@ -20,6 +20,10 @@ const MOVE_HANDLE_HEIGHT = 1.2
 const MOVE_HANDLE_GLOW_SCALE = 1.35
 const ROTATE_PICKER_TUBE_RADIUS = 0.9
 const ROTATE_RING_LINE_WIDTH_PX = 6
+// The small diamond/arrow tick mark on each ring (its rotation reference
+// point) is tiny by default (octahedron radius 0.04) — scaled up in place,
+// not touched by ROTATE_RING_LINE_WIDTH_PX since it's a separate mesh.
+const ROTATE_TICK_SCALE = 3
 // Extra headroom on top of the 44px-minimum sizing math below, so the whole
 // gizmo (both the visible rings and their click area, which scale together
 // via TransformControls' own `size` prop) reads as bigger and bolder overall.
@@ -81,6 +85,29 @@ function tuneRotationGizmo(controls: THREE.Object3D | null, canvasWidth: number,
       const material = child.material as THREE.Material
       material.opacity = 0
       child.userData.isEnlargedPicker = true
+    }
+  })
+
+  // The small diamond/arrow tick mark on each ring (three-stdlib's own
+  // OctahedronGeometry, marking that ring's rotation reference point) is a
+  // separate mesh from both the ring line and its picker, and untouched by
+  // either fix above — enlarge it in place, scaling around its own baked
+  // center (not the ring's origin) so it stays sitting on the ring instead
+  // of drifting outward the way a naive origin-based scale would.
+  controls.traverse((child) => {
+    if (
+      (child.name === 'X' || child.name === 'Y' || child.name === 'Z') &&
+      child instanceof THREE.Mesh &&
+      child.geometry instanceof THREE.OctahedronGeometry &&
+      !child.userData.isEnlargedTick
+    ) {
+      child.geometry.computeBoundingBox()
+      const center = new THREE.Vector3()
+      child.geometry.boundingBox!.getCenter(center)
+      child.geometry.translate(-center.x, -center.y, -center.z)
+      child.geometry.scale(ROTATE_TICK_SCALE, ROTATE_TICK_SCALE, ROTATE_TICK_SCALE)
+      child.geometry.translate(center.x, center.y, center.z)
+      child.userData.isEnlargedTick = true
     }
   })
 
