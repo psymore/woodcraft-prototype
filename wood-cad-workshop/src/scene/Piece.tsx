@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
 import { useThree } from '@react-three/fiber'
 import { TransformControls } from '@react-three/drei'
 import * as THREE from 'three'
+import { Line2, LineGeometry, LineMaterial } from 'three-stdlib'
 import type { ComponentDefinition, ComponentInstance } from '../engine'
 import { depthBiasFor, getBoxSize, getCylinderSize, getExplodedPosition, snapValue } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
@@ -11,18 +12,22 @@ import { MIN_TAP_TARGET_RADIUS_PX, minWorldRadiusForPixels, worldRadiusToPixels 
 
 const GRID_INCREMENT = 1
 const GROUND_PLANE = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
-const HANDLE_GAP = 0.5
+const HANDLE_GAP = 1
+const GIZMO_CLEARANCE_FACTOR = 1.4
 const ROTATION_SNAP = THREE.MathUtils.degToRad(15)
 const MOVE_HANDLE_RADIUS = 0.6
 const ROTATE_PICKER_SCALE = 2
+const ROTATE_RING_LINE_WIDTH_PX = 4
 
-// Called via TransformControls' ref when the rotate gizmo mounts. Removes
-// the free-rotate ("E", yellow) ring — a fourth ring outside the piece's
-// actual X/Y/Z axes that mostly just gets in the way — and enlarges the
-// invisible hit-test torus for the X/Y/Z rings (a separate mesh from the
-// thin visible ring line, and not otherwise adjustable via TransformControls
-// props) so they're easier to grab.
-function tuneRotationGizmo(controls: THREE.Object3D | null) {
+// Called via TransformControls' ref when the rotate gizmo mounts (and again
+// on canvas resize, since line width in pixels needs a fresh resolution).
+// Removes the free-rotate ("E", yellow) ring — a fourth ring outside the
+// piece's actual X/Y/Z axes that mostly just gets in the way — enlarges the
+// invisible hit-test torus for the X/Y/Z rings so they're easier to grab,
+// and swaps their thin (effectively 1px on most platforms, since
+// LineBasicMaterial's linewidth is ignored by WebGL) visual ring lines for
+// fat Line2/LineMaterial ones with a real pixel width.
+function tuneRotationGizmo(controls: THREE.Object3D | null, canvasWidth: number, canvasHeight: number) {
   if (!controls) return
   const eRings: THREE.Object3D[] = []
   controls.traverse((child) => {
@@ -38,6 +43,52 @@ function tuneRotationGizmo(controls: THREE.Object3D | null) {
     ) {
       child.scale.setScalar(ROTATE_PICKER_SCALE)
     }
+  })
+
+  // Already built on a previous mount/resize — just refresh the pixel
+  // width's resolution uniform (it depends on canvas size) rather than
+  // rebuilding (which would pile up duplicate thick rings).
+  let hasThickRings = false
+  controls.traverse((child) => {
+    if (child.userData.isThickRotateRing) {
+      hasThickRings = true
+      ;(child as InstanceType<typeof Line2>).material.resolution.set(canvasWidth, canvasHeight)
+    }
+  })
+  if (hasThickRings) return
+
+  const originals: THREE.Line[] = []
+  controls.traverse((child) => {
+    if (
+      (child.name === 'X' || child.name === 'Y' || child.name === 'Z') &&
+      child instanceof THREE.Line &&
+      !(child instanceof THREE.LineSegments)
+    ) {
+      originals.push(child)
+    }
+  })
+  originals.forEach((line) => {
+    const positions = Array.from((line.geometry.getAttribute('position') as THREE.BufferAttribute).array)
+    const geometry = new LineGeometry()
+    geometry.setPositions(positions)
+    const baseMaterial = line.material as THREE.LineBasicMaterial
+    const material = new LineMaterial({
+      color: baseMaterial.color.getHex(),
+      linewidth: ROTATE_RING_LINE_WIDTH_PX,
+      transparent: true,
+      opacity: baseMaterial.opacity,
+      depthTest: false,
+      depthWrite: false,
+    })
+    material.resolution.set(canvasWidth, canvasHeight)
+    const thickLine = new Line2(geometry, material)
+    // Same name as the original so it inherits three-stdlib's per-frame
+    // camera-facing quaternion update (matched by exact handle.name).
+    thickLine.name = line.name
+    thickLine.renderOrder = line.renderOrder
+    thickLine.userData.isThickRotateRing = true
+    line.visible = false
+    line.parent?.add(thickLine)
   })
 }
 
@@ -62,6 +113,11 @@ export function Piece({
   const showMoveHandle = useSceneSession((s) => s.showMoveHandle)
   const camera = useThree((s) => s.camera)
   const canvasSize = useThree((s) => s.size)
+
+  const tuneRotationGizmoRef = useCallback(
+    (controls: THREE.Object3D | null) => tuneRotationGizmo(controls, canvasSize.width, canvasSize.height),
+    [canvasSize.width, canvasSize.height],
+  )
 
   // State-backed callback ref, not useRef: TransformControls needs the real
   // group object at render time. A useRef is null on the first render and
@@ -232,9 +288,13 @@ export function Piece({
 
   const verticalHandle = (halfExtents: [number, number, number]) => {
     if (!showVerticalHandle) return null
+    // When the rotation gizmo is also showing, clear its rings with real
+    // headroom (not just their bare radius) so the cone reads as a clearly
+    // separate control instead of nearly touching the topmost ring.
+    const gizmoClearance = showGizmo ? getGizmoOuterRadius() * GIZMO_CLEARANCE_FACTOR : getGizmoOuterRadius()
     const position: [number, number, number] = [
       displayPosition[0],
-      displayPosition[1] + Math.max(getVerticalExtent(halfExtents), getGizmoOuterRadius()) + HANDLE_GAP,
+      displayPosition[1] + Math.max(getVerticalExtent(halfExtents), gizmoClearance) + HANDLE_GAP,
       displayPosition[2],
     ]
     // Fixed world-unit geometry shrinks below a comfortable tap target when
@@ -243,16 +303,26 @@ export function Piece({
     const minRadius = minWorldRadiusForPixels(MIN_TAP_TARGET_RADIUS_PX, new THREE.Vector3(...position), camera as THREE.PerspectiveCamera, canvasSize.height)
     const scale = Math.max(1, minRadius / MOVE_HANDLE_RADIUS)
     return (
-      <mesh
-        position={position}
-        scale={scale}
-        onPointerDown={handleVerticalPointerDown}
-        onPointerMove={handleVerticalPointerMove}
-        onPointerUp={handleVerticalPointerUp}
-      >
-        <coneGeometry args={[MOVE_HANDLE_RADIUS, 1.2, 12]} />
-        <meshStandardMaterial color="#4a90d9" />
-      </mesh>
+      <group position={position} scale={scale}>
+        {/* Glow halo — additive, non-interactive, drawn just behind the
+            outlined cone below. Same technique as the connection markers'
+            glow halos (ConnectionMarkers.tsx/AnchorMarkers.tsx): a larger,
+            faint, no-depth-write duplicate for a cheap neon feel. */}
+        <mesh scale={1.35} raycast={() => null}>
+          <coneGeometry args={[MOVE_HANDLE_RADIUS, 1.2, 12]} />
+          <meshBasicMaterial color="#4a90d9" transparent opacity={0.35} blending={THREE.AdditiveBlending} depthWrite={false} depthTest={false} />
+        </mesh>
+        {/* Transparent fill with a crisp edge outline — the neon-border
+            look, reusable for other pin-like handles if it reads well. */}
+        <mesh onPointerDown={handleVerticalPointerDown} onPointerMove={handleVerticalPointerMove} onPointerUp={handleVerticalPointerUp}>
+          <coneGeometry args={[MOVE_HANDLE_RADIUS, 1.2, 12]} />
+          <meshBasicMaterial color="#4a90d9" transparent opacity={0.12} depthWrite={false} />
+        </mesh>
+        <lineSegments raycast={() => null}>
+          <edgesGeometry args={[new THREE.ConeGeometry(MOVE_HANDLE_RADIUS, 1.2, 12)]} />
+          <lineBasicMaterial color="#7ec8ff" />
+        </lineSegments>
+      </group>
     )
   }
 
@@ -279,7 +349,7 @@ export function Piece({
         {verticalHandle([radius, radius, height / 2])}
         {showGizmo && group && (
           <TransformControls
-            ref={tuneRotationGizmo}
+            ref={tuneRotationGizmoRef}
             object={group}
             mode="rotate"
             space="world"
@@ -322,7 +392,7 @@ export function Piece({
       {verticalHandle([size[0] / 2, size[1] / 2, size[2] / 2])}
       {showGizmo && group && (
         <TransformControls
-          ref={tuneRotationGizmo}
+          ref={tuneRotationGizmoRef}
           object={group}
           mode="rotate"
           space="world"
