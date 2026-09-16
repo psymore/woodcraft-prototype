@@ -77,7 +77,7 @@ export function BottomSheet({
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
-          style={{ display: 'flex', justifyContent: 'center', padding: 8, touchAction: 'none' }}
+          style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 44, touchAction: 'none' }}
         >
           <div style={{ width: 36, height: 4, borderRadius: 2, background: '#ff7a1a' }} />
         </div>
