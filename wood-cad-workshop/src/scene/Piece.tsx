@@ -1,14 +1,77 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import type { ThreeEvent } from '@react-three/fiber'
 import { useThree } from '@react-three/fiber'
-import { TransformControls } from '@react-three/drei'
+import { TransformControls, useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { Line2, LineGeometry, LineMaterial } from 'three-stdlib'
 import type { ComponentDefinition, ComponentInstance } from '../engine'
-import { depthBiasFor, getBoxSize, getCylinderSize, getExplodedPosition, snapValue } from '../engine'
+import { depthBiasFor, getBoxSize, getCylinderSize, getExplodedPosition, getSpecies, snapValue } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
 import { MIN_TAP_TARGET_RADIUS_PX, minWorldRadiusForPixels, worldRadiusToPixels } from './screenSpace'
+
+// Fixed reference species for the useTexture call below — every Piece
+// (including non-wood hardware with no speciesId) must call the hook with
+// the same shape of arguments on every render, so pieces with no species
+// still load *some* texture set (it's simply never applied to their
+// material — see `woodMaterialMaps` below). Referencing an existing
+// species here instead of hardcoding paths keeps this from drifting if
+// species.ts's texture paths ever change.
+const FALLBACK_WOOD_TEXTURES = getSpecies('red_oak')!.textures
+// Roughly the real-world tile size (in the app's board-dimension units) the
+// source photo textures were shot at — used below to build UVs that repeat
+// the texture at a constant world-space scale, so grain reads at the same
+// size on a short board and a long one instead of one full texture
+// stretched (long pieces) or a single tiny tile blown up (short pieces).
+const TEXTURE_TILE_UNITS = 24
+
+// BoxGeometry's default UV is 0-1 per face regardless of that face's real
+// size, so a wood texture would stretch differently on a board's long top
+// face vs. its small end cap. Rewriting the UVs from each vertex's LOCAL
+// position (not world position, so rotating a placed piece doesn't restretch
+// its grain) and face normal — picking the two axes the face actually spans
+// — makes every face tile at the same world-space rate instead.
+function applyBoxWorldUV(geometry: THREE.BoxGeometry, tileUnits: number) {
+  const position = geometry.attributes.position
+  const normal = geometry.attributes.normal
+  const uv = geometry.attributes.uv
+  for (let i = 0; i < position.count; i++) {
+    const nx = Math.abs(normal.getX(i))
+    const ny = Math.abs(normal.getY(i))
+    const nz = Math.abs(normal.getZ(i))
+    let u: number
+    let v: number
+    if (nx >= ny && nx >= nz) {
+      u = position.getZ(i)
+      v = position.getY(i)
+    } else if (ny >= nx && ny >= nz) {
+      u = position.getX(i)
+      v = position.getZ(i)
+    } else {
+      u = position.getX(i)
+      v = position.getY(i)
+    }
+    uv.setXY(i, u / tileUnits, v / tileUnits)
+  }
+  uv.needsUpdate = true
+}
+
+// Same idea for the round rod's side wall — unwrap by arc length (angle ×
+// radius, so a fat rod's grain doesn't stretch thinner than a slim one) and
+// height, both in world units. Caps (top/bottom normal ~= ±Y) are left with
+// their default UV — cylindrical unwrap math is singular at their center,
+// and it's a small end-grain circle where that distortion would show most.
+function applyCylinderWorldUV(geometry: THREE.CylinderGeometry, radius: number, tileUnits: number) {
+  const position = geometry.attributes.position
+  const normal = geometry.attributes.normal
+  const uv = geometry.attributes.uv
+  for (let i = 0; i < position.count; i++) {
+    if (Math.abs(normal.getY(i)) > 0.5) continue
+    const angle = Math.atan2(position.getZ(i), position.getX(i))
+    uv.setXY(i, (angle * radius) / tileUnits, position.getY(i) / tileUnits)
+  }
+  uv.needsUpdate = true
+}
 
 const GRID_INCREMENT = 1
 const GROUND_PLANE = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
@@ -18,16 +81,16 @@ const ROTATION_SNAP = THREE.MathUtils.degToRad(15)
 const MOVE_HANDLE_RADIUS = 0.6
 const MOVE_HANDLE_HEIGHT = 1.2
 const MOVE_HANDLE_GLOW_SCALE = 1.35
-const ROTATE_PICKER_TUBE_RADIUS = 0.9
-const ROTATE_RING_LINE_WIDTH_PX = 6
+const ROTATE_PICKER_TUBE_RADIUS = 0.45
+const ROTATE_RING_LINE_WIDTH_PX = 1
 // The small diamond/arrow tick mark on each ring (its rotation reference
 // point) is tiny by default (octahedron radius 0.04) — scaled up in place,
 // not touched by ROTATE_RING_LINE_WIDTH_PX since it's a separate mesh.
-const ROTATE_TICK_SCALE = 3
+const ROTATE_TICK_SCALE = 1.75
 // Extra headroom on top of the 44px-minimum sizing math below, so the whole
 // gizmo (both the visible rings and their click area, which scale together
 // via TransformControls' own `size` prop) reads as bigger and bolder overall.
-const GIZMO_SIZE_BOOST = 1.4
+const GIZMO_SIZE_BOOST = 1
 
 // Called via TransformControls' ref when the rotate gizmo mounts (and again
 // on canvas resize, since line width in pixels needs a fresh resolution).
@@ -180,6 +243,29 @@ export function Piece({
   const camera = useThree((s) => s.camera)
   const canvasSize = useThree((s) => s.size)
 
+  const species = getSpecies(instance.speciesId)
+  const woodTextureInputs = useTexture({
+    map: species?.textures.color ?? FALLBACK_WOOD_TEXTURES.color,
+    normalMap: species?.textures.normal ?? FALLBACK_WOOD_TEXTURES.normal,
+    roughnessMap: species?.textures.roughness ?? FALLBACK_WOOD_TEXTURES.roughness,
+  })
+  // Tiling itself is done by the geometry's own UVs (applyBoxWorldUV /
+  // applyCylinderWorldUV below), not by `texture.repeat` — so, unlike the
+  // per-instance repeat this used to compute, the maps here are the SHARED
+  // textures useTexture returns, safe to reuse across every board of the
+  // same species without cloning. Only the wrap mode needs setting (once
+  // is enough — repeat-setting on an already-repeat-wrapped texture is a
+  // harmless no-op — so this doesn't need to be more than a plain `if`).
+  if (species) {
+    ;[woodTextureInputs.map, woodTextureInputs.normalMap, woodTextureInputs.roughnessMap].forEach((texture) => {
+      if (texture.wrapS === THREE.RepeatWrapping) return
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping
+      texture.needsUpdate = true
+    })
+    woodTextureInputs.map.colorSpace = THREE.SRGBColorSpace
+  }
+  const woodMaterialMaps = species ? woodTextureInputs : null
+
   const tuneRotationGizmoRef = useCallback(
     (controls: THREE.Object3D | null) => tuneRotationGizmo(controls, canvasSize.width, canvasSize.height),
     [canvasSize.width, canvasSize.height],
@@ -294,7 +380,11 @@ export function Piece({
   // accent (GizmoToggles/panelButtonStyle) and the point-point candidate
   // color (ConnectionMarkers.tsx) — selection is a different concept from
   // either and shouldn't share their hue family.
-  const color = selected ? '#4fd1ff' : instance.material
+  // With a texture map applied, `color` multiply-tints it (white = show the
+  // map's true colors, cyan = the existing selection glow drawn over the
+  // wood grain instead of replacing it) rather than being the piece's only
+  // color source the way it is for untextured hardware.
+  const color = selected ? '#4fd1ff' : woodMaterialMaps ? '#ffffff' : instance.material
   const displayPosition = getExplodedPosition(instance.position, centroid, explodeAmount)
 
   const showVerticalHandle = selected && explodeAmount === 0 && showMoveHandle
@@ -418,6 +508,15 @@ export function Piece({
 
   if (definition.geometry.shape === 'cylinder') {
     const { radius, height } = getCylinderSize(instance)
+    const cylinderGeometry = useMemo(() => {
+      const geometry = new THREE.CylinderGeometry(radius, radius, height, 16)
+      if (woodMaterialMaps) applyCylinderWorldUV(geometry, radius, TEXTURE_TILE_UNITS)
+      return geometry
+    }, [radius, height, woodMaterialMaps])
+    // <primitive>, unlike a declarative <cylinderGeometry>, isn't
+    // auto-disposed by R3F on change/unmount — this geometry is
+    // user-constructed (for the custom UVs above), so its disposal is too.
+    useEffect(() => () => cylinderGeometry.dispose(), [cylinderGeometry])
     return (
       <>
         <group ref={setGroup} position={displayPosition} rotation={instance.rotation}>
@@ -427,9 +526,12 @@ export function Piece({
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
           >
-            <cylinderGeometry args={[radius, radius, height, 16]} />
+            <primitive object={cylinderGeometry} attach="geometry" />
             <meshStandardMaterial
               color={color}
+              map={woodMaterialMaps?.map}
+              normalMap={woodMaterialMaps?.normalMap}
+              roughnessMap={woodMaterialMaps?.roughnessMap}
               polygonOffset
               polygonOffsetFactor={depthBiasFor(instance.id)}
               polygonOffsetUnits={depthBiasFor(instance.id)}
@@ -462,6 +564,12 @@ export function Piece({
   }
 
   const size = getBoxSize(instance)
+  const boxGeometry = useMemo(() => {
+    const geometry = new THREE.BoxGeometry(...size)
+    if (woodMaterialMaps) applyBoxWorldUV(geometry, TEXTURE_TILE_UNITS)
+    return geometry
+  }, [size[0], size[1], size[2], woodMaterialMaps])
+  useEffect(() => () => boxGeometry.dispose(), [boxGeometry])
   return (
     <>
       <group ref={setGroup} position={displayPosition} rotation={instance.rotation}>
@@ -470,9 +578,12 @@ export function Piece({
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
         >
-          <boxGeometry args={size} />
+          <primitive object={boxGeometry} attach="geometry" />
           <meshStandardMaterial
             color={color}
+            map={woodMaterialMaps?.map}
+            normalMap={woodMaterialMaps?.normalMap}
+            roughnessMap={woodMaterialMaps?.roughnessMap}
             polygonOffset
             polygonOffsetFactor={depthBiasFor(instance.id)}
             polygonOffsetUnits={depthBiasFor(instance.id)}

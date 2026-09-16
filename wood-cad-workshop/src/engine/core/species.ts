@@ -1,3 +1,9 @@
+export interface SpeciesTextureSet {
+  color: string
+  normal: string
+  roughness: string
+}
+
 export interface SpeciesDefinition {
   id: string
   name: string
@@ -5,6 +11,24 @@ export interface SpeciesDefinition {
   bendingStrength: number // MOR, in Pa
   sourceLabel: string // used verbatim as the Inspector citation text
   sourceUrl: string
+  // PBR photo texture set (CC0, ambientCG — see textureSourceUrl below) for
+  // Piece.tsx's meshStandardMaterial. `color` above stays the fallback for
+  // any species that doesn't get one, and is what tints the map on
+  // selection (see Piece.tsx's `hasWoodTexture` color logic).
+  textures: SpeciesTextureSet
+}
+
+// Photo texture sets in public/textures/wood/<speciesId>/, sourced from
+// ambientcg.com (CC0, no attribution required) and picked by visual/color
+// match to the species — not a claim that, say, red_oak's set was
+// photographed from an actual red oak board. See that folder's source
+// asset ids (Wood049 etc.) if a closer match turns up later.
+function textureSet(speciesId: string): SpeciesTextureSet {
+  return {
+    color: `/textures/wood/${speciesId}/color.jpg`,
+    normal: `/textures/wood/${speciesId}/normal.jpg`,
+    roughness: `/textures/wood/${speciesId}/roughness.jpg`,
+  }
 }
 
 // USDA Forest Products Laboratory, Wood Handbook, Chapter 5, Table
@@ -20,6 +44,7 @@ export const SPECIES_LIST: SpeciesDefinition[] = [
     bendingStrength: 98_600_000, // 98.6 MPa / 14,300 psi
     sourceLabel: 'red oak, USDA Wood Handbook',
     sourceUrl: WOOD_HANDBOOK_URL,
+    textures: textureSet('red_oak'),
   },
   {
     id: 'white_oak',
@@ -28,6 +53,7 @@ export const SPECIES_LIST: SpeciesDefinition[] = [
     bendingStrength: 105_000_000, // 105 MPa
     sourceLabel: 'white oak, USDA Wood Handbook',
     sourceUrl: WOOD_HANDBOOK_URL,
+    textures: textureSet('white_oak'),
   },
   {
     id: 'sugar_maple',
@@ -36,6 +62,7 @@ export const SPECIES_LIST: SpeciesDefinition[] = [
     bendingStrength: 109_000_000, // 109 MPa
     sourceLabel: 'sugar maple, USDA Wood Handbook',
     sourceUrl: WOOD_HANDBOOK_URL,
+    textures: textureSet('sugar_maple'),
   },
   {
     id: 'yellow_birch',
@@ -44,6 +71,7 @@ export const SPECIES_LIST: SpeciesDefinition[] = [
     bendingStrength: 114_000_000, // 114 MPa
     sourceLabel: 'yellow birch, USDA Wood Handbook',
     sourceUrl: WOOD_HANDBOOK_URL,
+    textures: textureSet('yellow_birch'),
   },
   {
     id: 'douglas_fir',
@@ -52,6 +80,7 @@ export const SPECIES_LIST: SpeciesDefinition[] = [
     bendingStrength: 85_000_000, // 85 MPa
     sourceLabel: 'Douglas fir, USDA Wood Handbook',
     sourceUrl: WOOD_HANDBOOK_URL,
+    textures: textureSet('douglas_fir'),
   },
   {
     id: 'longleaf_pine',
@@ -60,6 +89,7 @@ export const SPECIES_LIST: SpeciesDefinition[] = [
     bendingStrength: 100_000_000, // 100 MPa
     sourceLabel: 'longleaf pine, USDA Wood Handbook',
     sourceUrl: WOOD_HANDBOOK_URL,
+    textures: textureSet('longleaf_pine'),
   },
 ]
 
