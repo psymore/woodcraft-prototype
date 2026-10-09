@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react'
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Box, Circle, CircleDot, Focus, Maximize } from 'lucide-react'
 import type { ViewName } from '../engine'
 import { useSceneSession } from '../store/sceneSessionStore'
@@ -10,7 +11,7 @@ import { MenuButton } from './MenuButton'
 // from you" instead). Imperfect on their own, which is exactly what
 // MainMenu's label toggle is for — the tooltip (see MenuButton) always has
 // the real name regardless.
-const VIEW_ICONS: Record<ViewName, JSX.Element> = {
+const VIEW_ICONS: Record<ViewName, ReactElement> = {
   '3d': <Box size={18} />,
   front: <CircleDot size={18} />,
   back: <Circle size={18} />,
