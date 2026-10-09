@@ -136,7 +136,21 @@ function App() {
       onPointerUpCapture={handlePointerUpCapture}
       onPointerCancelCapture={handlePointerUpCapture}
     >
-      <Canvas camera={{ position: [0, 20, 25], fov: 50, near: 0.5, far: 500 }}>
+      {/* frameloop="demand": nothing in the scene animates on its own (no
+          useFrame anywhere), so only render when something changes — prop
+          changes, OrbitControls/TransformControls 'change' events and
+          resizes all invalidate automatically. Continuous rendering kept the
+          GPU busy at the display's full refresh rate while idle (144fps on a
+          144Hz monitor), spinning laptop fans and draining phone batteries.
+          Any future imperative scene mutation outside React props needs an
+          explicit invalidate() (see Piece.tsx's tuneRotationGizmoRef).
+          dpr cap: above 1.5x the extra pixels cost far more GPU time than
+          they visibly add on high-density phone/laptop screens. */}
+      <Canvas
+        frameloop="demand"
+        dpr={[1, 1.5]}
+        camera={{ position: [0, 20, 25], fov: 50, near: 0.5, far: 500 }}
+      >
         {/* Outermost safety net only — without SOME boundary here, an
             uncaught suspense (e.g. the very first texture load, before any
             piece exists to own it) would throw all the way past Canvas.

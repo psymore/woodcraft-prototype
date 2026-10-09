@@ -306,6 +306,7 @@ export function Piece({
   const showMoveHandle = useSceneSession((s) => s.showMoveHandle)
   const camera = useThree((s) => s.camera)
   const canvasSize = useThree((s) => s.size)
+  const invalidate = useThree((s) => s.invalidate)
 
   // Only needed here to know WHETHER this piece has a species (for the
   // color logic below) — the actual texture loading (and its suspense) is
@@ -313,8 +314,13 @@ export function Piece({
   const species = getSpecies(instance.speciesId)
 
   const tuneRotationGizmoRef = useCallback(
-    (controls: THREE.Object3D | null) => tuneRotationGizmo(controls, canvasSize.width, canvasSize.height),
-    [canvasSize.width, canvasSize.height],
+    (controls: THREE.Object3D | null) => {
+      tuneRotationGizmo(controls, canvasSize.width, canvasSize.height)
+      // Imperative geometry/material swaps outside React props — the
+      // demand-mode Canvas (see App.tsx) won't redraw for them on its own.
+      invalidate()
+    },
+    [canvasSize.width, canvasSize.height, invalidate],
   )
 
   // State-backed callback ref, not useRef: TransformControls needs the real
