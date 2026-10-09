@@ -5,10 +5,12 @@ import * as THREE from 'three'
 import type { ComponentDefinition, ComponentInstance, Connection, ConnectionCandidate, Dimensions } from '../engine'
 import {
   closestBetweenWorldAnchors,
+  createAssembledPullupKitInstances,
   createInstance,
   createPullupKitInstances,
   createSeedInstances,
   findClosestConnectionMatch,
+  findConnectionCandidates,
   getAnchors,
   getComponent,
   getConnectedPieceIds,
@@ -66,6 +68,7 @@ interface SceneSessionState {
   selectConnection: (id: string | null) => void
   addComponent: (definition: ComponentDefinition) => void
   addPullupKit: () => void
+  addAssembledPullupKit: () => void
   movePiece: (id: string, position: [number, number, number]) => void
   confirmConnection: (candidate: ConnectionCandidate) => void
   detachConnection: (connectionId: string) => void
@@ -119,6 +122,25 @@ export function createSceneSessionStore() {
 
     addPullupKit: () =>
       set((state) => ({ instances: [...state.instances, ...createPullupKitInstances()] })),
+
+    // Same as addPullupKit but pre-assembled: createAssembledPullupKitInstances
+    // already places the 5 pieces with their anchors touching, so running
+    // findConnectionCandidates over just those new instances (not the whole
+    // scene) finds exactly the 4 touching joints and they're persisted
+    // directly as Connections — no drag/confirm step needed.
+    addAssembledPullupKit: () =>
+      set((state) => {
+        const newInstances = createAssembledPullupKitInstances()
+        const candidates = findConnectionCandidates(newInstances, [], SNAP_DISTANCE)
+        const newConnections = candidates.map((c) => ({
+          id: `conn-${c.pieceAId}-${c.pieceBId}-${c.a.anchorIndex}-${c.b.anchorIndex}`,
+          ...c,
+        }))
+        return {
+          instances: [...state.instances, ...newInstances],
+          connections: [...state.connections, ...newConnections],
+        }
+      }),
 
     movePiece: (id, position) =>
       set((state) => {
