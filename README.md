@@ -4,6 +4,10 @@ A mobile-first 3D woodworking modeler: build furniture out of typed wood
 pieces (boards, panels, dowels, blocks) with smart edge/face/end
 snapping instead of generic 3D primitive manipulation.
 
+**Live demo:** https://psymore.github.io/woodcraft-prototype/ — the
+`wood-cad-workshop` app, redeployed to GitHub Pages on every push to
+`master` that touches it (see [.github/workflows/deploy-pages.yml](.github/workflows/deploy-pages.yml)).
+
 Design and roadmap: [docs/superpowers/specs/2026-08-20-woodcraft-prototype-design.md](docs/superpowers/specs/2026-08-20-woodcraft-prototype-design.md)
 
 ## Status
