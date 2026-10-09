@@ -83,11 +83,14 @@ export function MainMenu({
               top: 'calc(48px + max(8px, env(safe-area-inset-top)))',
               left: 'max(8px, env(safe-area-inset-left))',
               zIndex: 3,
-              // Wide enough for the 7 view-preset buttons (ViewControls) to
-              // sit on one row at icon-only size — 7 × 44px min tap target
-              // + 6 × 8px gaps + this panel's own 12px×2 padding.
-              width: 'min(400px, 92vw)',
+              // ViewControls lays out its rows as a fixed 3/2/2 grouping
+              // (see that file), never more than 3 icon-only buttons wide,
+              // so the panel only needs to fit that — capped well inside
+              // the viewport (88vw, not 92vw) so it can't crowd the right
+              // edge on a narrow phone.
+              width: 'min(320px, 88vw)',
               maxHeight: '75vh',
+              overflowX: 'hidden',
               overflowY: 'auto',
               background: 'var(--wc-panel)',
               color: 'var(--wc-text)',
