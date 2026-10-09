@@ -25,9 +25,9 @@ export interface SpeciesDefinition {
 // asset ids (Wood049 etc.) if a closer match turns up later.
 function textureSet(speciesId: string): SpeciesTextureSet {
   return {
-    color: `textures/wood/${speciesId}/color.jpg`,
-    normal: `textures/wood/${speciesId}/normal.jpg`,
-    roughness: `textures/wood/${speciesId}/roughness.jpg`,
+    color: `textures/wood/${speciesId}/color.webp`,
+    normal: `textures/wood/${speciesId}/normal.webp`,
+    roughness: `textures/wood/${speciesId}/roughness.webp`,
   }
 }
 
